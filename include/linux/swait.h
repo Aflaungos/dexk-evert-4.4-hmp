@@ -4,6 +4,7 @@
 #include <linux/list.h>
 #include <linux/stddef.h>
 #include <linux/spinlock.h>
+<<<<<<< HEAD
 #include <linux/wait.h>
 #include <asm/current.h>
 
@@ -32,6 +33,20 @@
  *
  * Secondly, we had to drop a fair number of features of the other waitqueue
  * code; notably:
+=======
+#include <asm/current.h>
+
+/*
+ * Simple wait queues
+ *
+ * While these are very similar to the other/complex wait queues (wait.h) the
+ * most important difference is that the simple waitqueue allows for
+ * deterministic behaviour -- IOW it has strictly bounded IRQ and lock hold
+ * times.
+ *
+ * In order to make this so, we had to drop a fair number of features of the
+ * other waitqueue code; notably:
+>>>>>>> 9d7c9ab46dd3 (wait.[ch]: Introduce the simple waitqueue (swait) implementation)
  *
  *  - mixing INTERRUPTIBLE and UNINTERRUPTIBLE sleeps on the same waitqueue;
  *    all wakeups are TASK_NORMAL in order to avoid O(n) lookups for the right
@@ -40,6 +55,7 @@
  *  - the exclusive mode; because this requires preserving the list order
  *    and this is hard.
  *
+<<<<<<< HEAD
  *  - custom wake callback functions; because you cannot give any guarantees
  *    about random code. This also allows swait to be used in RT, such that
  *    raw spinlock can be used for the swait queue head.
@@ -48,6 +64,14 @@
  * For all the above, note that simple wait queues should _only_ be used under
  * very specific realtime constraints -- it is best to stick with the regular
  * wait queues in most cases.
+=======
+ *  - custom wake functions; because you cannot give any guarantees about
+ *    random code.
+ *
+ * As a side effect of this; the data structures are slimmer.
+ *
+ * One would recommend using this wait queue where possible.
+>>>>>>> 9d7c9ab46dd3 (wait.[ch]: Introduce the simple waitqueue (swait) implementation)
  */
 
 struct task_struct;
@@ -97,6 +121,7 @@ extern void __init_swait_queue_head(struct swait_queue_head *q, const char *name
 	DECLARE_SWAIT_QUEUE_HEAD(name)
 #endif
 
+<<<<<<< HEAD
 /**
  * swait_active -- locklessly test for waiters on the queue
  * @wq: the waitqueue to test for waiters
@@ -154,12 +179,21 @@ static inline bool swq_has_sleeper(struct swait_queue_head *wq)
 	 */
 	smp_mb();
 	return swait_active(wq);
+=======
+static inline int swait_active(struct swait_queue_head *q)
+{
+	return !list_empty(&q->task_list);
+>>>>>>> 9d7c9ab46dd3 (wait.[ch]: Introduce the simple waitqueue (swait) implementation)
 }
 
 extern void swake_up(struct swait_queue_head *q);
 extern void swake_up_all(struct swait_queue_head *q);
 extern void swake_up_locked(struct swait_queue_head *q);
 
+<<<<<<< HEAD
+=======
+extern void __prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait);
+>>>>>>> 9d7c9ab46dd3 (wait.[ch]: Introduce the simple waitqueue (swait) implementation)
 extern void prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait, int state);
 extern long prepare_to_swait_event(struct swait_queue_head *q, struct swait_queue *wait, int state);
 
@@ -240,6 +274,7 @@ do {									\
 	__ret;								\
 })
 
+<<<<<<< HEAD
 #define __swait_event_idle(wq, condition)				\
 	(void)___swait_event(wq, condition, TASK_IDLE, 0, schedule())
 
@@ -295,4 +330,6 @@ do {									\
 	__ret;								\
 })
 
+=======
+>>>>>>> 9d7c9ab46dd3 (wait.[ch]: Introduce the simple waitqueue (swait) implementation)
 #endif /* _LINUX_SWAIT_H */
