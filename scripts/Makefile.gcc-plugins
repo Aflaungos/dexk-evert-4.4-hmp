@@ -39,9 +39,19 @@ ifdef CONFIG_GCC_PLUGINS
     GCC_PLUGINS_CFLAGS := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGINS_CFLAGS))
   endif
 
+<<<<<<< HEAD
   KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
   GCC_PLUGIN := $(gcc-plugin-y)
   GCC_PLUGIN_SUBDIR := $(gcc-plugin-subdir-y)
+=======
+  ifneq ($(PLUGINCC),)
+    # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
+    GCC_PLUGINS_CFLAGS := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGINS_CFLAGS))
+  endif
+
+  KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
+  GCC_PLUGIN := $(gcc-plugin-y)
+>>>>>>> 6c98442cde3c (gcc-plugins: abort builds cleanly when not supported)
 endif
 
 # If plugins aren't supported, abort the build before hard-to-read compiler
