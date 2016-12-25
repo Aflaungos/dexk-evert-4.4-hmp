@@ -781,7 +781,11 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
 	}
 
 	if (unlikely(ts->nohz_mode == NOHZ_MODE_INACTIVE)) {
+<<<<<<< HEAD
 		ts->sleep_length = NSEC_PER_SEC/HZ;
+=======
+		ts->sleep_length = NSEC_PER_SEC / HZ;
+>>>>>>> 4f16bdf45a3e (ktime: Get rid of the union)
 		return false;
 	}
 
