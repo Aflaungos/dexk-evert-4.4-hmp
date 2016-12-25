@@ -669,7 +669,11 @@ static void hrtimer_reprogram(struct hrtimer *timer,
  */
 static inline void hrtimer_init_hres(struct hrtimer_cpu_base *base)
 {
+<<<<<<< HEAD
         base->expires_next = KTIME_MAX;
+=======
+	base->expires_next = KTIME_MAX;
+>>>>>>> 4f16bdf45a3e (ktime: Get rid of the union)
 	base->hang_detected = 0;
 	base->hres_active = 0;
 	base->next_timer = NULL;
