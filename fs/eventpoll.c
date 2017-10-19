@@ -1235,8 +1235,13 @@ static int ep_create_wakeup_source(struct epitem *epi)
 {
 	struct name_snapshot n;
 	struct wakeup_source *ws;
+	char task_comm_buf[TASK_COMM_LEN];
+	char buf[64];
+
+	get_task_comm(task_comm_buf, current);
 
 	if (!epi->ep->ws) {
+<<<<<<< HEAD
 #ifdef CONFIG_FS_EPOLL_WAKEUP_DEBUG
 		char full_ep_name[64];
 		snprintf(full_ep_name, 64, "eventpoll-%s-%d",
@@ -1245,12 +1250,23 @@ static int ep_create_wakeup_source(struct epitem *epi)
 #else
 		epi->ep->ws = wakeup_source_register("eventpoll");
 #endif
+=======
+		snprintf(buf, sizeof(buf), "epoll_%.*s_epollfd",
+			 (int)sizeof(task_comm_buf), task_comm_buf);
+		epi->ep->ws = wakeup_source_register(buf);
+>>>>>>> e7b2aee6f987 (fs: Improve eventpoll logging to stop indicting timerfd)
 		if (!epi->ep->ws)
 			return -ENOMEM;
 	}
 
 	take_dentry_name_snapshot(&n, epi->ffd.file->f_path.dentry);
+<<<<<<< HEAD
 	ws = wakeup_source_register(n.name);
+=======
+	snprintf(buf, sizeof(buf), "epoll_%.*s_file:%s",
+		 (int)sizeof(task_comm_buf), task_comm_buf, n.name);
+	ws = wakeup_source_register(buf);
+>>>>>>> e7b2aee6f987 (fs: Improve eventpoll logging to stop indicting timerfd)
 	release_dentry_name_snapshot(&n);
 
 	if (!ws)
