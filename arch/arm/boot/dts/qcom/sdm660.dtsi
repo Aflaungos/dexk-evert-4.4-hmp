@@ -34,7 +34,11 @@
 
 	chosen {
 		stdout-path = "serial0";
+<<<<<<< HEAD
 		bootargs = "rcupdate.rcu_normal_after_boot=1 quiet noirqdebug";
+=======
+		bootargs = "quiet noirqdebug rcupdate.rcu_normal_after_boot=1 cgroup.memory=nokmem,nosocket";
+>>>>>>> 639c87492c39 (ARM: dts: msm: disable memcg kernel and socket accounting on sdm660)
 	};
 
 	psci {
