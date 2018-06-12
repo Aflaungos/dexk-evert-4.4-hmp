@@ -72,11 +72,7 @@ void swake_up_all(struct swait_queue_head *q)
 }
 EXPORT_SYMBOL(swake_up_all);
 
-<<<<<<< HEAD
 static void __prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait)
-=======
-void __prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait)
->>>>>>> 9d7c9ab46dd3 (wait.[ch]: Introduce the simple waitqueue (swait) implementation)
 {
 	wait->task = current;
 	if (list_empty(&wait->task_list))
