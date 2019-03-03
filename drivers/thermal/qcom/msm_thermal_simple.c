@@ -59,6 +59,7 @@ static void thermal_throttle_worker(struct work_struct *work)
 	struct thermal_drv *t = container_of(to_delayed_work(work), typeof(*t),
 					     throttle_work);
 	struct thermal_zone *new_zone, *old_zone;
+<<<<<<< HEAD
 	int temp = 0, temp_cpus_avg = 0, temp_batt = 0, rc;
 	s64 temp_total = 0, temp_avg = 0;
 	short i = 0;
@@ -91,6 +92,20 @@ static void thermal_throttle_worker(struct work_struct *work)
 	/* Emergency case */
 	if (temp_cpus_avg > 90000)
 		temp_avg = (temp_cpus_avg * 6 + temp_batt) / 7;
+=======
+	int temp = 0, temp_avg = 0;
+	s64 temp_total = 0;
+	short i = 0;
+
+	for (i; i < NR_CPUS; i++) {
+		char zone_name[15];
+		sprintf(zone_name, "cpu-1-%i-usr", i);
+		thermal_zone_get_temp(thermal_zone_get_zone_by_name(zone_name), &temp);
+		temp_total += temp;
+	}
+
+	temp_avg = temp_total / NR_CPUS;
+>>>>>>> e5c1932fb109 (msm: thermal: simple: Introduce simple MSM thermal solution)
 
 	old_zone = t->curr_zone;
 	new_zone = NULL;
@@ -104,10 +119,17 @@ static void thermal_throttle_worker(struct work_struct *work)
 
 	/* Update thermal zone if it changed */
 	if (new_zone != old_zone) {
+<<<<<<< HEAD
 		pr_info("temp_avg: %i, batt: %i, cpus: %i\n", temp_avg, temp_batt, temp_cpus_avg);
 		t->curr_zone = new_zone;
 	}
 	update_online_cpu_policy();
+=======
+		pr_info("temp: %i\n", temp_avg);
+		t->curr_zone = new_zone;
+		update_online_cpu_policy();
+	}
+>>>>>>> e5c1932fb109 (msm: thermal: simple: Introduce simple MSM thermal solution)
 
 	queue_delayed_work(t->wq, &t->throttle_work, t->poll_jiffies);
 }
@@ -131,6 +153,7 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long val,
 		return NOTIFY_OK;
 
 	zone = t->curr_zone;
+<<<<<<< HEAD
 
 	if (zone) {
 		u32 target_freq = get_throttle_freq(zone, policy->cpu);
@@ -140,6 +163,12 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long val,
 	} else {
 		policy->max = policy->user_policy.max;
 	}
+=======
+	if (zone)
+		policy->max = get_throttle_freq(zone, policy->cpu);
+	else
+		policy->max = policy->user_policy.max;
+>>>>>>> e5c1932fb109 (msm: thermal: simple: Introduce simple MSM thermal solution)
 
 	if (policy->max < policy->min)
 		policy->min = policy->max;
