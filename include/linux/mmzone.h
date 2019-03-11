@@ -162,7 +162,10 @@ enum zone_stat_item {
 	NR_DIRTIED,		/* page dirtyings since bootup */
 	NR_WRITTEN,		/* page writings since bootup */
 	NR_ION_HEAP,		/* allocation from ION system heap */
+<<<<<<< HEAD
 	NR_GPU_HEAP,
+=======
+>>>>>>> cd87bc87fb2c (mm: add ION heap-pool allocation stat into vmstat)
 	NR_PAGES_SCANNED,	/* pages scanned since last reclaim */
 #if IS_ENABLED(CONFIG_ZSMALLOC)
 	NR_ZSPAGES,		/* allocated in zsmalloc */
