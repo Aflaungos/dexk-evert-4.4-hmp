@@ -21,79 +21,143 @@
 		qcom,start-delay = <60>;
 		zone@0 {
 			reg = <0>;
+<<<<<<< HEAD
 			qcom,silver-khz = <201600>;
 			qcom,gold-khz = <2515200>;
 			qcom,trip-deg = <70>;
+=======
+			qcom,silver-khz = <1843200>;
+			qcom,gold-khz = <2150400>;
+			qcom,trip-deg = <39>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@1 {
 			reg = <1>;
+<<<<<<< HEAD
 			qcom,silver-khz = <1843200>;
 			qcom,gold-khz = <2515200>;
 			qcom,trip-deg = <73>;
+=======
+			qcom,silver-khz = <1747200>;
+			qcom,gold-khz = <2150400>;
+			qcom,trip-deg = <41>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@2 {
 			reg = <2>;
+<<<<<<< HEAD
 			qcom,silver-khz = <1728000>;
 			qcom,gold-khz = <2208000>;
 			qcom,trip-deg = <75>;
+=======
+			qcom,silver-khz = <1747200>;
+			qcom,gold-khz = <1958400>;
+			qcom,trip-deg = <43>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@3 {
 			reg = <3>;
+<<<<<<< HEAD
 			qcom,silver-khz = <1728000>;
 			qcom,gold-khz = <2016000>;
 			qcom,trip-deg = <80>;
+=======
+			qcom,silver-khz = <1747200>;
+			qcom,gold-khz = <1747200>;
+			qcom,trip-deg = <45>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@4 {
 			reg = <4>;
+<<<<<<< HEAD
 			qcom,silver-khz = <1728000>;
 			qcom,gold-khz = <1881600>;
 			qcom,trip-deg = <84>;
+=======
+			qcom,silver-khz = <1747200>;
+			qcom,gold-khz = <1401600>;
+			qcom,trip-deg = <47>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@5 {
 			reg = <5>;
 			qcom,silver-khz = <1536000>;
+<<<<<<< HEAD
 			qcom,gold-khz = <16704000>;
 			qcom,trip-deg = <86>;
+=======
+			qcom,gold-khz = <1401600>;
+			qcom,trip-deg = <59>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@6 {
 			reg = <6>;
 			qcom,silver-khz = <1536000>;
+<<<<<<< HEAD
 			qcom,gold-khz = <1344000>;
 			qcom,trip-deg = <88>;
+=======
+			qcom,gold-khz = <1113600>;
+			qcom,trip-deg = <53>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@7 {
 			reg = <7>;
+<<<<<<< HEAD
 			qcom,silver-khz = <1382400>;
 			qcom,gold-khz = <1113600>;
 			qcom,trip-deg = <90>;
+=======
+			qcom,silver-khz = <1401600>;
+			qcom,gold-khz = <1113600>;
+			qcom,trip-deg = <57>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@8 {
 			reg = <8>;
+<<<<<<< HEAD
 			qcom,silver-khz = <1094400>;
 			qcom,gold-khz = <1113600>;
 			qcom,trip-deg = <91>;
+=======
+			qcom,silver-khz = <1113600>;
+			qcom,gold-khz = <1113600>;
+			qcom,trip-deg = <59>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@9 {
 			reg = <9>;
+<<<<<<< HEAD
 			qcom,silver-khz = <883200>;
 			qcom,gold-khz = <1113600>;
 			qcom,trip-deg = <92>;
+=======
+			qcom,silver-khz = <902400>;
+			qcom,gold-khz = <1113600>;
+			qcom,trip-deg = <64>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 
 		zone@10 {
 			reg = <10>;
+<<<<<<< HEAD
 			qcom,silver-khz = <614400>;
 			qcom,gold-khz = <1113600>;
 			qcom,trip-deg = <93>;
+=======
+			qcom,silver-khz = <633600>;
+			qcom,gold-khz = <1113600>;
+			qcom,trip-deg = <69>;
+>>>>>>> a67d912d43bc (ARM: dts: simple-thermal: move into a separate file)
 		};
 	};
 };
