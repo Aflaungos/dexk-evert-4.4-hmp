@@ -607,8 +607,18 @@ struct mdss_dsi_ctrl_pdata {
 	struct task_struct *wake_thread;
 	struct completion wake_comp;
 	wait_queue_head_t wake_waitq;
+<<<<<<< HEAD
 	atomic_t disp_is_on;
 	atomic_t needs_wake;
+=======
+	atomic_t disp_en;
+};
+
+enum {
+	MDSS_DISPLAY_OFF,
+	MDSS_DISPLAY_WAKING,
+	MDSS_DISPLAY_ON
+>>>>>>> 25fa4e7ad822 (msm: mdss: Power on display asynchronously as early as possible)
 };
 
 struct dsi_status_data {
