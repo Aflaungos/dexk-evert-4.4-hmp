@@ -710,7 +710,11 @@ int schedtune_task_boost_rcu_locked(struct task_struct *p)
 
 	/* Get task boost value */
 	st = task_schedtune(p);
+<<<<<<< HEAD
 	task_boost = st->boost * schedtune_adj_ta(p);
+=======
+	task_boost = st->boost;
+>>>>>>> 6142455b0616 (kernel: sched: Mitigate non-boosted tasks preempting boosted tasks)
 
 	return task_boost;
 }
