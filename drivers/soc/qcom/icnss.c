@@ -4859,9 +4859,13 @@ static int icnss_probe(struct platform_device *pdev)
 		}
 	}
 
+<<<<<<< HEAD
 	if (of_get_property(dev->of_node, WLAN_DETUNE_REG_NAME "-supply", NULL))
 		priv->wlan_reg_detune =
 			devm_regulator_get(&pdev->dev, WLAN_DETUNE_REG_NAME);
+=======
+	device_enable_async_suspend(dev);
+>>>>>>> ed530bd6831a (soc:qcom:icnss Async suspend/resume callbacks.)
 
 	spin_lock_init(&priv->event_lock);
 	spin_lock_init(&priv->on_off_lock);
