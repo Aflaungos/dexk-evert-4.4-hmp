@@ -513,8 +513,104 @@ _search3:
 	return (int) (((char *)op) - dest);
 }
 
+<<<<<<< HEAD
 int lz4hc_compress(const unsigned char *src, size_t src_len,
 			unsigned char *dst, size_t *dst_len, void *wrkmem)
+=======
+static int LZ4_compress_HC_extStateHC(
+	void *state,
+	const char *src,
+	char *dst,
+	int srcSize,
+	int maxDstSize,
+	int compressionLevel)
+{
+	LZ4HC_CCtx_internal *ctx = &((LZ4_streamHC_t *)state)->internal_donotuse;
+
+	if (((size_t)(state)&(sizeof(void *) - 1)) != 0) {
+		/* Error : state is not aligned
+		 * for pointers (32 or 64 bits)
+		 */
+		return 0;
+	}
+
+	LZ4HC_init(ctx, (const BYTE *)src);
+
+	if (maxDstSize < LZ4_compressBound(srcSize))
+		return LZ4HC_compress_generic(ctx, src, dst,
+			srcSize, maxDstSize, compressionLevel, limitedOutput);
+	else
+		return LZ4HC_compress_generic(ctx, src, dst,
+			srcSize, maxDstSize, compressionLevel, noLimit);
+}
+
+int LZ4_compress_HC(const char *src, char *dst, int srcSize,
+	int maxDstSize, int compressionLevel, void *wrkmem)
+{
+	return LZ4_compress_HC_extStateHC(wrkmem, src, dst,
+		srcSize, maxDstSize, compressionLevel);
+}
+EXPORT_SYMBOL(LZ4_compress_HC);
+
+/**************************************
+ *	Streaming Functions
+ **************************************/
+void LZ4_resetStreamHC(LZ4_streamHC_t *LZ4_streamHCPtr, int compressionLevel)
+{
+	LZ4_streamHCPtr->internal_donotuse.base = NULL;
+	LZ4_streamHCPtr->internal_donotuse.compressionLevel = (unsigned int)compressionLevel;
+}
+
+int LZ4_loadDictHC(LZ4_streamHC_t *LZ4_streamHCPtr,
+	const char *dictionary,
+	int dictSize)
+{
+	LZ4HC_CCtx_internal *ctxPtr = &LZ4_streamHCPtr->internal_donotuse;
+
+	if (dictSize > 64 * KB) {
+		dictionary += dictSize - 64 * KB;
+		dictSize = 64 * KB;
+	}
+	LZ4HC_init(ctxPtr, (const BYTE *)dictionary);
+	if (dictSize >= 4)
+		LZ4HC_Insert(ctxPtr, (const BYTE *)dictionary + (dictSize - 3));
+	ctxPtr->end = (const BYTE *)dictionary + dictSize;
+	return dictSize;
+}
+EXPORT_SYMBOL(LZ4_loadDictHC);
+
+/* compression */
+
+static void LZ4HC_setExternalDict(
+	LZ4HC_CCtx_internal *ctxPtr,
+	const BYTE *newBlock)
+{
+	if (ctxPtr->end >= ctxPtr->base + 4) {
+		/* Referencing remaining dictionary content */
+		LZ4HC_Insert(ctxPtr, ctxPtr->end - 3);
+	}
+
+	/*
+	 * Only one memory segment for extDict,
+	 * so any previous extDict is lost at this stage
+	 */
+	ctxPtr->lowLimit	= ctxPtr->dictLimit;
+	ctxPtr->dictLimit = (U32)(ctxPtr->end - ctxPtr->base);
+	ctxPtr->dictBase	= ctxPtr->base;
+	ctxPtr->base = newBlock - ctxPtr->dictLimit;
+	ctxPtr->end	= newBlock;
+	/* match referencing will resume from there */
+	ctxPtr->nextToUpdate = ctxPtr->dictLimit;
+}
+
+static int LZ4_compressHC_continue_generic(
+	LZ4_streamHC_t *LZ4_streamHCPtr,
+	const char *source,
+	char *dest,
+	int inputSize,
+	int maxOutputSize,
+	limitedOutput_directive limit)
+>>>>>>> b0f8478ee2f3 (lz4: do not export static symbol)
 {
 	int ret = -1;
 	int out_len = 0;
