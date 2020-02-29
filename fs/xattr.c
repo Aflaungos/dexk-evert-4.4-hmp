@@ -430,7 +430,11 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 	void *kvalue = NULL;
 	void *vvalue = NULL;
 	char kname[XATTR_NAME_MAX + 1];
+<<<<<<< HEAD
 	char kvalue_onstack[SZ_4K] __aligned(sizeof(long));
+=======
+	char kvalue_onstack[255];
+>>>>>>> 026929b46e00 (xattr: Avoid dynamically allocating memory in getxattr for small xattrs)
 
 	error = strncpy_from_user(kname, name, sizeof(kname));
 	if (error == 0 || error == sizeof(kname))
@@ -441,7 +445,10 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 	if (size) {
 		if (size <= ARRAY_SIZE(kvalue_onstack)) {
 			kvalue = kvalue_onstack;
+<<<<<<< HEAD
 			memset(kvalue, 0, size);
+=======
+>>>>>>> 026929b46e00 (xattr: Avoid dynamically allocating memory in getxattr for small xattrs)
 		} else {
 			if (size > XATTR_SIZE_MAX)
 				size = XATTR_SIZE_MAX;
