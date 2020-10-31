@@ -2,4 +2,8 @@ ccflags-y += -I$(src)			# needed for trace events
 
 obj-$(CONFIG_ANDROID_BINDER_IPC)	+= binder.o binder_alloc.o
 obj-$(CONFIG_ANDROID_BINDER_IPC_SELFTEST) += binder_alloc_selftest.o
+<<<<<<< HEAD
 obj-$(CONFIG_ANDROID_SIMPLE_LMK)	+= simple_lmk.o
+=======
+obj-$(CONFIG_ANDROID_SIMPLE_LMK)	+= simple_lmk.o android_helper.o
+>>>>>>> ae8826a6188b (ANDROID: Do not compile android_helper if simple lmk is not used)
