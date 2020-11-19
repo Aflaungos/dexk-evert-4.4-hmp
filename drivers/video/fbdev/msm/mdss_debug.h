@@ -64,6 +64,7 @@ struct vbif_debug_bus {
 #define MDSS_XLOG(...) mdss_xlog(__func__, __LINE__, MDSS_XLOG_DEFAULT, \
 		##__VA_ARGS__, DATA_LIMITER)
 
+<<<<<<< HEAD
 #ifndef CONFIG_FB_MSM_MDSS_XLOG_MMI
 #define MDSS_XLOG_TOUT_HANDLER(...)	\
 	mdss_xlog_tout_handler_default(false, false, __func__, ##__VA_ARGS__, \
@@ -80,6 +81,11 @@ struct vbif_debug_bus {
 	mdss_xlog_tout_handler_default(true, false, __func__, ##__VA_ARGS__, \
 		XLOG_TOUT_DATA_LIMITER)
 #endif
+=======
+#define MDSS_XLOG_TOUT_HANDLER(...)
+
+#define MDSS_XLOG_TOUT_HANDLER_WQ(...)
+>>>>>>> 1e5a85aa929c (mdss: disable debug fs support)
 
 #define MDSS_XLOG_DBG(...) mdss_xlog(__func__, __LINE__, MDSS_XLOG_DBG, \
 		##__VA_ARGS__, DATA_LIMITER)
@@ -97,7 +103,7 @@ struct vbif_debug_bus {
 #define ATRACE_INT(name, value) \
 	trace_mdp_trace_counter(current->tgid, name, value)
 
-#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_FB_MSM_MDSS)
+#if defined(CONFIG_DEBUG_FS_) && defined(CONFIG_FB_MSM_MDSS)
 
 #define MDSS_DEBUG_BASE_MAX 10
 
@@ -176,12 +182,16 @@ void mdss_misr_crc_collect(struct mdss_data_type *mdata, int block_id,
 
 int mdss_create_xlog_debug(struct mdss_debug_data *mdd);
 void mdss_xlog(const char *name, int line, int flag, ...);
+<<<<<<< HEAD
 void mdss_xlog_tout_handler_default(bool is_mmi, bool queue,
 				const char *name, ...);
 u32 get_dump_range(struct dump_offset *range_node, size_t max_offset);
 void mdss_dump_reg(const char *dump_name, u32 reg_dump_flag, char *addr,
 	int len, u32 **dump_mem, phys_addr_t *regs_phys, bool from_isr);
 void mdss_mdp_debug_mid(u32 mid);
+=======
+void mdss_xlog_tout_handler_default(bool queue, const char *name, ...);
+>>>>>>> 1e5a85aa929c (mdss: disable debug fs support)
 void mdss_dump_dsi_debug_bus(u32 bus_dump_flag, u32 **dump_mem);
 int mdss_dump_misr_data(char **buf, u32 size);
 #else
@@ -226,12 +236,15 @@ static inline void mdss_xlog(const char *name, int line, int flag, ...) { }
 static inline void mdss_dsi_debug_check_te(struct mdss_panel_data *pdata) { }
 static inline void mdss_xlog_tout_handler_default(bool is_mmi, bool queue,
 	const char *name, ...) { }
+<<<<<<< HEAD
 static inline u32 get_dump_range(struct dump_offset *range_node, size_t max_offset)
 	{ return 0; }
 static inline void mdss_dump_reg(const char *dump_name, u32 reg_dump_flag, char *addr,
 	int len, u32 **dump_mem, bool from_isr) { }
 static inline void mdss_mdp_debug_mid(u32 mid) { }
 static inline int mdss_dump_misr_data(char **buf, u32 size) { return 0; }
+=======
+>>>>>>> 1e5a85aa929c (mdss: disable debug fs support)
 #endif
 
 static inline int mdss_debug_register_io(const char *name,
