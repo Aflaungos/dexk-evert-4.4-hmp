@@ -21,6 +21,8 @@ KBUILD_OPTIONS += CONFIG_QCA_WIFI_ISOC=0
 KBUILD_OPTIONS += CONFIG_QCA_WIFI_2_0=1
 KBUILD_OPTIONS += $(WLAN_SELECT)
 KBUILD_OPTIONS += $(KBUILD_EXTRA) # Extra config if any
+subdir-ccflags-y  += -Os
+subdir-ccflags-y  += -foptimize-sibling-calls
 
 all:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
@@ -29,4 +31,4 @@ modules_install:
 	$(MAKE) INSTALL_MOD_STRIP=1 M=$(M) -C $(KERNEL_SRC) modules_install
 
 clean:
-	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean $(KBUILD_OPTIONS)
