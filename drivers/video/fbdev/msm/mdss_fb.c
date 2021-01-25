@@ -49,6 +49,7 @@
 #include <linux/mdss_io_util.h>
 #include <linux/wakelock.h>
 #include <linux/devfreq_boost.h>
+#include <linux/pm_qos.h>
 #include <sync.h>
 #include <sw_sync.h>
 
@@ -5215,11 +5216,11 @@ int mdss_fb_atomic_commit_ioctl(struct fb_info *info,
 		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()))
 	};
 	int ret;
-
+ 
 	pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 100);
 	ret = __mdss_fb_atomic_commit_ioctl(info, argp, file);
 	pm_qos_remove_request(&req);
-
+ 
 	return ret;
 }
 
