@@ -1916,7 +1916,7 @@ static void mdss_dsi_start_wake_thread(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	if (ctrl_pdata->wake_thread)
 		return;
 
-	ctrl_pdata->wake_thread = kthread_run(mdss_dsi_disp_wake_thread,
+	ctrl_pdata->wake_thread = kthread_run_perf_critical(cpu_perf_mask, mdss_dsi_disp_wake_thread,
 						&ctrl_pdata->panel_data,
 						"mdss_disp_wake");
 	if (IS_ERR(ctrl_pdata->wake_thread)) {
@@ -3891,7 +3891,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		ctrl_pdata->shared_data->dsi1_active = true;
 
 	mdss_dsi_debug_bus_init(mdss_dsi_res);
-
 	ctrl_pdata->wake_notif.notifier_call = mdss_dsi_fb_unblank_cb;
 	ctrl_pdata->wake_notif.priority = INT_MAX - 1;
 	fb_register_client(&ctrl_pdata->wake_notif);
