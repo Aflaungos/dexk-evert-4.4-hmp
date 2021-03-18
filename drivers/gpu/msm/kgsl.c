@@ -4928,7 +4928,6 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 				PM_QOS_CPU_DMA_LATENCY,
 				PM_QOS_DEFAULT_VALUE);
 
-<<<<<<< HEAD
 	if (device->pwrctrl.l2pc_cpus_mask) {
 
 		device->pwrctrl.l2pc_cpus_qos.type =
@@ -4945,8 +4944,6 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 				PM_QOS_DEFAULT_VALUE);
 	}
 
-=======
->>>>>>> 5716893c37b1 (msm: kgsl: Remove unused l2pc qos)
 	device->events_wq = alloc_workqueue("kgsl-events",
 		WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_SYSFS, 0);
 
@@ -4980,6 +4977,8 @@ void kgsl_device_platform_remove(struct kgsl_device *device)
 	kgsl_pwrctrl_uninit_sysfs(device);
 
 	pm_qos_remove_request(&device->pwrctrl.pm_qos_req_dma);
+	if (device->pwrctrl.l2pc_cpus_mask)
+		pm_qos_remove_request(&device->pwrctrl.l2pc_cpus_qos);
 
 	idr_destroy(&device->context_idr);
 
