@@ -46,7 +46,6 @@
 #include <linux/file.h>
 #include <linux/kthread.h>
 #include <linux/dma-buf.h>
-#include <linux/adrenokgsl_state.h>
 #include <sync.h>
 #include <sw_sync.h>
 
