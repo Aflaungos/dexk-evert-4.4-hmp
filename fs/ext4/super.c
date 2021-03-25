@@ -67,7 +67,6 @@ static void ext4_mark_recovery_complete(struct super_block *sb,
 static void ext4_clear_journal_err(struct super_block *sb,
 				   struct ext4_super_block *es);
 static int ext4_sync_fs(struct super_block *sb, int wait);
-static void ext4_umount_end(struct super_block *sb, int flags);
 static int ext4_remount(struct super_block *sb, int *flags, char *data);
 static int ext4_statfs(struct dentry *dentry, struct kstatfs *buf);
 static int ext4_unfreeze(struct super_block *sb);
@@ -1141,7 +1140,6 @@ static const struct super_operations ext4_sops = {
 	.freeze_fs	= ext4_freeze,
 	.unfreeze_fs	= ext4_unfreeze,
 	.statfs		= ext4_statfs,
-	.umount_end	= ext4_umount_end,
 	.remount_fs	= ext4_remount,
 	.show_options	= ext4_show_options,
 #ifdef CONFIG_QUOTA
@@ -1163,7 +1161,7 @@ enum {
 	Opt_bsd_df, Opt_minix_df, Opt_grpid, Opt_nogrpid,
 	Opt_resgid, Opt_resuid, Opt_sb, Opt_err_cont, Opt_err_panic, Opt_err_ro,
 	Opt_nouid32, Opt_debug, Opt_removed,
-	Opt_user_xattr, Opt_nouser_xattr, Opt_no_sehash_xattr, Opt_acl, Opt_noacl,
+	Opt_user_xattr, Opt_nouser_xattr, Opt_acl, Opt_noacl,
 	Opt_auto_da_alloc, Opt_noauto_da_alloc, Opt_noload,
 	Opt_commit, Opt_min_batch_time, Opt_max_batch_time, Opt_journal_dev,
 	Opt_journal_path, Opt_journal_checksum, Opt_journal_async_commit,
@@ -1201,7 +1199,6 @@ static const match_table_t tokens = {
 	{Opt_removed, "orlov"},
 	{Opt_user_xattr, "user_xattr"},
 	{Opt_nouser_xattr, "nouser_xattr"},
-	{Opt_no_sehash_xattr, "no_sehash_xattr"},
 	{Opt_acl, "acl"},
 	{Opt_noacl, "noacl"},
 	{Opt_noload, "norecovery"},
@@ -1438,7 +1435,6 @@ static const struct mount_opts {
 	 MOPT_NO_EXT2 | MOPT_DATAJ},
 	{Opt_user_xattr, EXT4_MOUNT_XATTR_USER, MOPT_SET},
 	{Opt_nouser_xattr, EXT4_MOUNT_XATTR_USER, MOPT_CLEAR},
-	{Opt_no_sehash_xattr, EXT4_MOUNT_NO_SEHASH_XATTR, MOPT_SET},
 #ifdef CONFIG_EXT4_FS_POSIX_ACL
 	{Opt_acl, EXT4_MOUNT_POSIX_ACL, MOPT_SET},
 	{Opt_noacl, EXT4_MOUNT_POSIX_ACL, MOPT_CLEAR},
@@ -1466,45 +1462,6 @@ static const struct mount_opts {
 	{Opt_test_dummy_encryption, 0, MOPT_GTE0},
 	{Opt_err, 0, 0}
 };
-
-#ifdef CONFIG_EXT4_FORCE_NODISCARD
-#include <linux/of.h>
-
-int use_force_nodiscard_strategy = 0;
-__u32 force_nodiscard_blkdev = 0;
-
-static int force_nodiscard(char *devname)
-{
-	struct property *p;
-	struct device_node *n;
-	char storagevendor[32] = {0};
-	char userdata[32] = {0};
-	int userblk_num;
-
-	n = of_find_node_by_path("/chosen/mmi,storage");
-	if (n == NULL) {
-		return 0;
-	}
-
-	for_each_property_of_node(n, p) {
-		if (!strcmp(p->name, "manufacturer") && p->value)
-			strlcpy(storagevendor, (char *)p->value,
-					sizeof(storagevendor));
-	}
-
-	of_node_put(n);
-
-	userblk_num = CONFIG_EXT4_USERDATA_BLKNUM;
-	sprintf(userdata, "mmcblk0p%d", userblk_num);
-
-	pr_info("manufacturer devname userdataname:%s %s %s\n", storagevendor, devname, userdata);
-	if (!strcmp(strim(storagevendor), "MICRON") && (strstr(devname, userdata) != NULL)){
-		return 1;
-	}
-
-	return 0;
-}
-#endif
 
 static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 			    substring_t *args, unsigned long *journal_devnum,
@@ -1748,12 +1705,6 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 		else
 			sbi->s_mount_opt &= ~m->mount_opt;
 	}
-#ifdef CONFIG_EXT4_FORCE_NODISCARD
-	if (force_nodiscard(sb->s_id)){
-		use_force_nodiscard_strategy = 1;
-		force_nodiscard_blkdev = sb->s_dev;
-	}
-#endif
 	return 1;
 }
 
@@ -2038,8 +1989,8 @@ int ext4_alloc_flex_bg_array(struct super_block *sb, ext4_group_t ngroup)
 	if (size <= sbi->s_flex_groups_allocated)
 		return 0;
 
-	new_groups = kvzalloc(roundup_pow_of_two(size *
-			      sizeof(*sbi->s_flex_groups)), GFP_KERNEL);
+	new_groups = ext4_kvzalloc(roundup_pow_of_two(size *
+				   sizeof(*sbi->s_flex_groups)), GFP_KERNEL);
 	if (!new_groups) {
 		ext4_msg(sb, KERN_ERR,
 			 "not enough memory for %d flex group pointers", size);
@@ -3862,7 +3813,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 		}
 	}
 	rcu_assign_pointer(sbi->s_group_desc,
-			   kvmalloc(db_count *
+			   ext4_kvmalloc(db_count *
 					  sizeof(struct buffer_head *),
 					  GFP_KERNEL));
 	if (sbi->s_group_desc == NULL) {
@@ -4817,22 +4768,6 @@ struct ext4_mount_options {
 	char *s_qf_names[EXT4_MAXQUOTAS];
 #endif
 };
-
-static void ext4_umount_end(struct super_block *sb, int flags)
-{
-	/*
-	 * this is called at the end of umount(2). If there is an unclosed
-	 * namespace, ext4 won't do put_super() which triggers fsck in the
-	 * next boot.
-	 */
-	if ((flags & MNT_FORCE) || atomic_read(&sb->s_active) > 1) {
-		ext4_msg(sb, KERN_ERR,
-			"errors=remount-ro for active namespaces on umount %x",
-						flags);
-		clear_opt(sb, ERRORS_PANIC);
-		set_opt(sb, ERRORS_RO);
-	}
-}
 
 static int ext4_remount(struct super_block *sb, int *flags, char *data)
 {
