@@ -15,6 +15,7 @@
 #include "ext4_jbd2.h"
 #include "ext4.h"
 #include "xattr.h"
+#include <trace/events/android_fs.h>
 
 static int ext4_inode_has_encryption_context(struct inode *inode)
 {
@@ -147,6 +148,24 @@ int ext4_get_policy(struct inode *inode, struct ext4_encryption_policy *policy)
 	return 0;
 }
 
+static void ext4_encryption_info_print(struct inode *inode, const char *key,
+	char d_mode, char f_mode, char flags)
+{
+	int i;
+	char key_hex[EXT4_KEY_DESCRIPTOR_SIZE * 2 + 1];
+	char *p = key_hex;
+	char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
+
+	for (i = EXT4_KEY_DESCRIPTOR_SIZE - 1; i >= 0; i--)
+		p += snprintf(p, sizeof(key_hex) - (p - key_hex),
+			"%02x", key[i]);
+	key_hex[sizeof(key_hex) - 1] = 0;
+	path = android_fstrace_get_pathname(pathbuf,
+		MAX_TRACE_PATHBUF_LEN, inode);
+	pr_info("EXT4-fs: %s %02x %02x %02x %lu-%s\n",
+		key_hex, d_mode, f_mode, flags, inode->i_ino, path);
+}
+
 int ext4_is_child_context_consistent_with_parent(struct inode *parent,
 						 struct inode *child)
 {
@@ -164,8 +183,11 @@ int ext4_is_child_context_consistent_with_parent(struct inode *parent,
 		return 1;
 
 	/* Encrypted directories must not contain unencrypted files */
-	if (!ext4_encrypted_inode(child))
+	if (!ext4_encrypted_inode(child)) {
+		pr_warn("EXT4-fs (%s): unencrypted file %lu in encrypted dir %lu\n",
+			child->i_sb->s_id, child->i_ino, parent->i_ino);
 		return 0;
+	}
 
 	/*
 	 * Both parent and child are encrypted, so verify they use the same
@@ -183,35 +205,58 @@ int ext4_is_child_context_consistent_with_parent(struct inode *parent,
 	 */
 
 	res = ext4_get_encryption_info(parent);
-	if (res)
+	if (res) {
+		pr_warn("%s: get parent encryption info %lu  dir\n", __func__,
+			parent->i_ino);
 		return 0;
+	}
 	res = ext4_get_encryption_info(child);
-	if (res)
+	if (res) {
+		pr_warn("%s: get parent encryption info %lu  file\n", __func__,
+			child->i_ino);
 		return 0;
+	}
 	parent_ci = EXT4_I(parent)->i_crypt_info;
 	child_ci = EXT4_I(child)->i_crypt_info;
 	if (parent_ci && child_ci) {
-		return memcmp(parent_ci->ci_master_key, child_ci->ci_master_key,
+		res = memcmp(parent_ci->ci_master_key, child_ci->ci_master_key,
 			      EXT4_KEY_DESCRIPTOR_SIZE) == 0 &&
 			(parent_ci->ci_data_mode == child_ci->ci_data_mode) &&
 			(parent_ci->ci_filename_mode ==
 			 child_ci->ci_filename_mode) &&
 			(parent_ci->ci_flags == child_ci->ci_flags);
+		if (!res) {
+			pr_warn("EXT4-fs (%s): crypt info mismatch %d-%s\n",
+				child->i_sb->s_id, current->pid, current->comm);
+			ext4_encryption_info_print(parent,
+				parent_ci->ci_master_key,
+				parent_ci->ci_data_mode,
+				parent_ci->ci_filename_mode,
+				parent_ci->ci_flags);
+			ext4_encryption_info_print(child,
+				child_ci->ci_master_key, child_ci->ci_data_mode,
+				child_ci->ci_filename_mode, child_ci->ci_flags);
+		}
+		return res;
 	}
 
 	res = ext4_xattr_get(parent, EXT4_XATTR_INDEX_ENCRYPTION,
 			     EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
 			     &parent_ctx, sizeof(parent_ctx));
-	if (res != sizeof(parent_ctx))
+	if (res != sizeof(parent_ctx)) {
+		pr_warn("%s: parent ctx size error res:%d\n", __func__, res);
 		return 0;
+	}
 
 	res = ext4_xattr_get(child, EXT4_XATTR_INDEX_ENCRYPTION,
 			     EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
 			     &child_ctx, sizeof(child_ctx));
-	if (res != sizeof(child_ctx))
+	if (res != sizeof(child_ctx)) {
+		pr_warn("%s: child ctx size error res:%d\n", __func__, res);
 		return 0;
+	}
 
-	return memcmp(parent_ctx.master_key_descriptor,
+	res = memcmp(parent_ctx.master_key_descriptor,
 		      child_ctx.master_key_descriptor,
 		      EXT4_KEY_DESCRIPTOR_SIZE) == 0 &&
 		(parent_ctx.contents_encryption_mode ==
@@ -219,6 +264,21 @@ int ext4_is_child_context_consistent_with_parent(struct inode *parent,
 		(parent_ctx.filenames_encryption_mode ==
 		 child_ctx.filenames_encryption_mode) &&
 		(parent_ctx.flags == child_ctx.flags);
+	if (!res) {
+		pr_warn("EXT4-fs (%s): crypt context mismatch %d-%s\n",
+			child->i_sb->s_id, current->pid, current->comm);
+		ext4_encryption_info_print(parent,
+			parent_ctx.master_key_descriptor,
+			parent_ctx.contents_encryption_mode,
+			parent_ctx.filenames_encryption_mode,
+			parent_ctx.flags);
+		ext4_encryption_info_print(child,
+			child_ctx.master_key_descriptor,
+			child_ctx.contents_encryption_mode,
+			child_ctx.filenames_encryption_mode,
+			child_ctx.flags);
+	}
+	return res;
 }
 
 /**
