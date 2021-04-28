@@ -25,7 +25,6 @@
 #include <linux/adrenokgsl_state.h>
 #include <linux/charging_state.h>
 #include <linux/agni_meminfo.h>
-#include <linux/mm.h>
 
 bool triggerswapping = false;
 int agni_swappiness = 30;
@@ -35,11 +34,9 @@ bool ramchecked = false;
 int ramgb;
 
 void device_totalram(void) {
-	unsigned long int totalrampages;
 
 	if (!ramchecked) {
-		totalrampages = totalram_pages();
-		totalmemk = totalrampages << (PAGE_SHIFT - 10);
+		totalmemk = totalram_pages << (PAGE_SHIFT - 10);
 	
 		if (totalmemk > 5505024) {
 			ramgb = 8; /* 8GB device */
