@@ -731,7 +731,6 @@ void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
 int mdss_dsi_phy_pll_reset_status(struct mdss_dsi_ctrl_pdata *ctrl);
 int mdss_dsi_check_panel_status(struct mdss_dsi_ctrl_pdata *ctrl, void *arg);
 
-<<<<<<< HEAD
 void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl, struct dsi_panel_cmds *pcmds, u32 flags);
 
 #ifdef CONFIG_DEBUG_FS
@@ -753,12 +752,6 @@ int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 u32 mdss_dsi_panel_forced_tx_mode_get(struct mdss_panel_info *pinfo);
 void mdss_dsi_panel_forced_tx_mode_set(struct mdss_panel_info *pinfo,
 				bool enable);
-=======
-#ifdef CONFIG_DEBUG_FS_
-void mdss_dsi_debug_bus_init(struct mdss_dsi_data *sdata);
-#endif
-void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,struct dsi_panel_cmds *pcmds, u32 flags);
->>>>>>> 1e5a85aa929c (mdss: disable debug fs support)
 
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {
