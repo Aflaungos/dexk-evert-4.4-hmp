@@ -2863,12 +2863,6 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 	has_array_args = err;
 
 	if (has_array_args) {
-<<<<<<< HEAD
-		array_buf = kmalloc(array_size, GFP_KERNEL);
-		err = -ENOMEM;
-		if (array_buf == NULL)
-			goto out_array_args;
-=======
 		/*
 		 * When adding new types of array args, make sure that the
 		 * parent argument to ioctl (which contains the pointer to the
@@ -2883,7 +2877,6 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 			if (NULL == mbuf)
 				goto out_array_args;
 		}
->>>>>>> 2af4b6fd19f9 (media: v4l2-ioctl: Use larger on-stack video copy buffers)
 		err = -EFAULT;
 		if (copy_from_user(array_buf, user_ptr, array_size))
 			goto out_array_args;
@@ -2926,13 +2919,8 @@ out_array_args:
 	}
 
 out:
-<<<<<<< HEAD
-	kfree(array_buf);
-	kfree(mbuf);
-=======
 	if (mbuf != mbuf_onstack)
 		kfree(mbuf);
->>>>>>> 2af4b6fd19f9 (media: v4l2-ioctl: Use larger on-stack video copy buffers)
 	return err;
 }
 EXPORT_SYMBOL(video_usercopy);
