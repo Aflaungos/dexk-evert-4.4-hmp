@@ -643,7 +643,6 @@ static void cpuidle_clear_idle_cpu(unsigned int cpu)
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
-<<<<<<< HEAD
 	static unsigned long prev_latency[NR_CPUS] = {
 		[0 ... NR_CPUS - 1] = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE
 	};
@@ -666,19 +665,6 @@ static int cpuidle_latency_notify(struct notifier_block *b,
 		/* Notifier is called with preemption disabled */
 		arch_send_call_function_ipi_mask(&update_mask);
 	}
-=======
-	static unsigned long prev_latency = ULONG_MAX;
-	struct cpumask cpus;
-
-	if (l < prev_latency) {
-		cpumask_andnot(&cpus, cpu_online_mask, cpu_isolated_mask);
-		preempt_disable();
-		smp_call_function_many(&cpus, smp_callback, NULL, false);
-		preempt_enable();
-	}
-
-	prev_latency = l;
->>>>>>> 84d8b458333c (cpuidle: Eliminate significant overhead from pm_qos latency notifier)
 
 	return NOTIFY_OK;
 }
