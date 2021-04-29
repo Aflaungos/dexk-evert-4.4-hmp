@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -23,13 +23,13 @@
  * debugfs with roaming related information
  */
 
-#include "osif_sync.h"
 #include <wlan_hdd_debugfs_csr.h>
 #include <wlan_hdd_main.h>
 #include <cds_sched.h>
 #include <wma_api.h>
 #include "qwlan_version.h"
 #include "wmi_unified_param.h"
+#include "wlan_hdd_request_manager.h"
 #include "wlan_hdd_debugfs.h"
 
 ssize_t
@@ -52,9 +52,9 @@ wlan_hdd_current_time_info_debugfs(uint8_t *buf, ssize_t buf_avail_len)
 }
 
 /**
- * wlan_hdd_debugfs_update_csr() - Function to update internal debugfs buffer
+ * wlan_hdd_debugfs_update_csr() - Function to upadte internal debugfs buffer
  * and write into user-space buffer
- * @hdd_ctx: hdd context
+ * @hd_ctx: hdd context
  * @adapter: adapter
  * @id: used to identify file for which this info has to be read
  * @buf: output buffer to write
@@ -63,10 +63,8 @@ wlan_hdd_current_time_info_debugfs(uint8_t *buf, ssize_t buf_avail_len)
  * Return: Number of bytes read on success, zero otherwise
  */
 static ssize_t
-wlan_hdd_debugfs_update_csr(struct hdd_context *hdd_ctx,
-			    struct hdd_adapter *adapter,
-			    enum hdd_debugfs_file_id id,
-			    uint8_t *buf,
+wlan_hdd_debugfs_update_csr(hdd_context_t *hdd_ctx, hdd_adapter_t *adapter,
+			    enum hdd_debugfs_file_id id, uint8_t *buf,
 			    ssize_t buf_avail_len)
 {
 	ssize_t len = 0;
@@ -96,7 +94,7 @@ wlan_hdd_debugfs_update_csr(struct hdd_context *hdd_ctx,
 
 /**
  * __wlan_hdd_read_debugfs_csr() - Function to read debug stats
- * @info: buffer info allocated when the debugfs file was opened
+ * @file: file pointer
  * @buf: buffer
  * @count: count
  * @pos: position pointer
@@ -104,17 +102,25 @@ wlan_hdd_debugfs_update_csr(struct hdd_context *hdd_ctx,
  * Return: Number of bytes read on success, zero otherwise
  */
 static ssize_t
-__wlan_hdd_read_debugfs_csr(struct wlan_hdd_debugfs_buffer_info *info,
-			    char __user *buf, size_t count, loff_t *pos)
+__wlan_hdd_read_debugfs_csr(struct file *file, char __user *buf,
+			    size_t count, loff_t *pos)
 {
-	struct hdd_adapter *adapter = info->adapter;
-	struct hdd_context *hdd_ctx;
+	struct wlan_hdd_debugfs_buffer_info *info;
+	hdd_adapter_t *adapter;
+	hdd_context_t *hdd_ctx;
 	int ret;
 	ssize_t length;
 
-	hdd_enter();
+	ENTER();
 
-	if (adapter->magic != WLAN_HDD_ADAPTER_MAGIC) {
+	info = file->private_data;
+	if (!info || !info->data) {
+		hdd_err("No valid private data");
+		return 0;
+	}
+
+	adapter = info->adapter;
+	if ((!adapter) || (adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
 		hdd_err("Invalid adapter or adapter has invalid magic");
 		return 0;
 	}
@@ -130,10 +136,10 @@ __wlan_hdd_read_debugfs_csr(struct wlan_hdd_debugfs_buffer_info *info,
 	}
 
 	if (*pos == 0) {
-		info->length = wlan_hdd_debugfs_update_csr(hdd_ctx, adapter,
-							   info->id,
-							   info->data,
-							   info->max_buf_len);
+		info->length =
+			wlan_hdd_debugfs_update_csr(hdd_ctx, adapter,
+						      info->id, info->data,
+						      info->max_buf_len);
 	}
 
 	length = simple_read_from_buffer(buf, count, pos,
@@ -141,7 +147,7 @@ __wlan_hdd_read_debugfs_csr(struct wlan_hdd_debugfs_buffer_info *info,
 	hdd_debug("length written = %zu, count: %zu, pos: %lld",
 		  length, count, *pos);
 
-	hdd_exit();
+	EXIT();
 	return length;
 }
 
@@ -158,40 +164,42 @@ static ssize_t
 wlan_hdd_read_debugfs_csr(struct file *file, char __user *buf,
 			  size_t count, loff_t *pos)
 {
-	struct wlan_hdd_debugfs_buffer_info *info = file->private_data;
-	struct osif_vdev_sync *vdev_sync;
-	ssize_t err_size;
+	int ret;
 
-	err_size = osif_vdev_sync_op_start(info->adapter->dev, &vdev_sync);
-	if (err_size)
-		return err_size;
+	cds_ssr_protect(__func__);
+	ret = __wlan_hdd_read_debugfs_csr(file, buf, count, pos);
+	cds_ssr_unprotect(__func__);
 
-	err_size = __wlan_hdd_read_debugfs_csr(info, buf, count, pos);
-
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return err_size;
+	return ret;
 }
 
 /**
  * __wlan_hdd_open_debugfs_csr() - Allocates memory for private data
- * @adapter: the HDD adapter to operate against
- * @csr: file info used to register the debugfs file
+ * @inode: Pointer to inode structure
  * @file: file pointer
  *
- * Return: Errno
+ * Return: zero
  */
-static int __wlan_hdd_open_debugfs_csr(struct hdd_adapter *adapter,
-				       struct hdd_debugfs_file_info *csr,
+static int __wlan_hdd_open_debugfs_csr(struct inode *inode,
 				       struct file *file)
 {
 	struct wlan_hdd_debugfs_buffer_info *info;
-	struct hdd_context *hdd_ctx;
+	struct hdd_debugfs_file_info *csr;
+	hdd_adapter_t *adapter = NULL;
+	hdd_context_t *hdd_ctx;
 	int ret;
 
-	hdd_enter();
+	ENTER();
 
-	if (adapter->magic != WLAN_HDD_ADAPTER_MAGIC) {
+	csr = inode->i_private;
+	if (!csr) {
+		hdd_err("No private data");
+		return -EINVAL;
+	}
+
+	adapter = qdf_container_of(csr, hdd_adapter_t,
+				   csr_file[csr->id]);
+	if ((adapter == NULL) || (adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
 		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
 	}
@@ -224,60 +232,59 @@ static int __wlan_hdd_open_debugfs_csr(struct hdd_adapter *adapter,
 	info->adapter = adapter;
 
 	file->private_data = info;
-	hdd_exit();
+	EXIT();
 
 	return 0;
 }
 
 /**
  * wlan_hdd_open_debugfs_csr() - SSR wrapper function to allocate memory for
- *	private data on file open
+ * private data on file open
  * @inode: Pointer to inode structure
  * @file: file pointer
  *
- * Return: Errno
+ * Return: zero
  */
-static int wlan_hdd_open_debugfs_csr(struct inode *inode, struct file *file)
+static int wlan_hdd_open_debugfs_csr(struct inode *inode,
+				     struct file *file)
 {
-	struct hdd_debugfs_file_info *csr = inode->i_private;
-	struct hdd_adapter *adapter = qdf_container_of(csr, struct hdd_adapter,
-						       csr_file[csr->id]);
-	struct osif_vdev_sync *vdev_sync;
-	int errno;
+	int ret;
 
-	errno = osif_vdev_sync_op_start(adapter->dev, &vdev_sync);
-	if (errno)
-		return errno;
+	cds_ssr_protect(__func__);
 
 	hdd_debugfs_thread_increment();
-	errno = __wlan_hdd_open_debugfs_csr(adapter, csr, file);
-	if (errno)
+	ret = __wlan_hdd_open_debugfs_csr(inode, file);
+	if (ret)
 		hdd_debugfs_thread_decrement();
 
-	osif_vdev_sync_op_stop(vdev_sync);
+	cds_ssr_unprotect(__func__);
 
-	return errno;
+	return ret;
 }
 
 /**
  * __wlan_hdd_release_debugfs_csr() - Function to free private memory on
- *	release
+ * release
+ * @inode: Pointer to inode structure
  * @file: file pointer
  *
- * Return: Errno
+ * Return: zero
  */
-static int
-__wlan_hdd_release_debugfs_csr(struct file *file)
+static int __wlan_hdd_release_debugfs_csr(struct inode *inode,
+					  struct file *file)
 {
 	struct wlan_hdd_debugfs_buffer_info *info = file->private_data;
 
-	hdd_enter();
+	ENTER();
+
+	if (!info)
+		return 0;
 
 	file->private_data = NULL;
 	qdf_mem_free(info->data);
 	qdf_mem_free(info);
 
-	hdd_exit();
+	EXIT();
 
 	return 0;
 }
@@ -288,24 +295,18 @@ __wlan_hdd_release_debugfs_csr(struct file *file)
  * @inode: Pointer to inode structure
  * @file: file pointer
  *
- * Return: Errno
+ * Return: zero
  */
 static int wlan_hdd_release_debugfs_csr(struct inode *inode, struct file *file)
 {
-	struct wlan_hdd_debugfs_buffer_info *info = file->private_data;
-	struct osif_vdev_sync *vdev_sync;
-	int errno;
+	int ret;
 
-	errno = osif_vdev_sync_op_start(info->adapter->dev, &vdev_sync);
-	if (errno)
-		return errno;
-
-	errno = __wlan_hdd_release_debugfs_csr(file);
+	cds_ssr_protect(__func__);
+	ret = __wlan_hdd_release_debugfs_csr(inode, file);
 	hdd_debugfs_thread_decrement();
+	cds_ssr_unprotect(__func__);
 
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return errno;
+	return ret;
 }
 
 static const struct file_operations fops_csr_debugfs = {
@@ -316,7 +317,7 @@ static const struct file_operations fops_csr_debugfs = {
 	.llseek = default_llseek,
 };
 
-void wlan_hdd_debugfs_csr_init(struct hdd_adapter *adapter)
+void wlan_hdd_debugfs_csr_init(hdd_adapter_t *adapter)
 {
 	struct hdd_debugfs_file_info *csr;
 	const uint32_t max_len = HDD_DEBUGFS_FILE_NAME_MAX;
@@ -348,7 +349,8 @@ void wlan_hdd_debugfs_csr_init(struct hdd_adapter *adapter)
 						 adapter->debugfs_phy,
 						 csr, &fops_csr_debugfs);
 		if (!csr->entry)
-			hdd_err("Failed to create generic_info debugfs file");
+			hdd_err("Failed to create debugfs file: %s",
+				csr->name);
 	}
 
 	csr = &adapter->csr_file[HDD_DEBUFS_FILE_ID_ROAM_SCAN_STATS_INFO];
@@ -360,11 +362,12 @@ void wlan_hdd_debugfs_csr_init(struct hdd_adapter *adapter)
 						 adapter->debugfs_phy,
 						 csr, &fops_csr_debugfs);
 		if (!csr->entry)
-			hdd_err("Failed to create generic_info debugfs file");
+			hdd_err("Failed to create debugfs file: %s",
+				csr->name);
 	}
 }
 
-void wlan_hdd_debugfs_csr_deinit(struct hdd_adapter *adapter)
+void wlan_hdd_debugfs_csr_deinit(hdd_adapter_t *adapter)
 {
 	uint32_t i;
 	struct dentry *entry;

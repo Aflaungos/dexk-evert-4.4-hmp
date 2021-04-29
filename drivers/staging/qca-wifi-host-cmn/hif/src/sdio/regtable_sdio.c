@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,7 +17,6 @@
  */
 
 #include "bmi_msg.h"
-#include "target_type.h"
 #include "cepci.h"
 
 #define MISSING 0
@@ -47,7 +46,7 @@ void target_register_tbl_attach(struct hif_softc *scn, u32 target_type)
 
 void hif_register_tbl_attach(struct hif_softc *scn, u32 hif_type)
 {
-	if (!scn) {
+	if (NULL == scn) {
 		QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_ERROR,
 			  "%s: sc is NULL", __func__);
 		return;

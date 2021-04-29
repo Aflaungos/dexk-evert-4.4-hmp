@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2011-2012, 2014-2015, 2017-2019 The Linux Foundation. All
- * rights reserved.
+ * Copyright (c) 2011-2012, 2014-2015, 2017 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -35,24 +34,48 @@
 #define LOG4    7
 #define LOGD    8
 
-#define pe_alert_rl(params...)
-#define pe_err_rl(params...)
-#define pe_warn_rl(params...)
-#define pe_info_rl(params...)
-#define pe_debug_rl(params...)
+#define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#define MAC_ADDRESS_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 
-#define pe_alert(params...)
-#define pe_err(params...)
-#define pe_warn(params...)
-#define pe_info(params...)
-#define pe_debug(params...)
+#define pe_log_rate_limited(rate, level, args...) \
+		QDF_TRACE_RATE_LIMITED(rate, QDF_MODULE_ID_PE, level, ## args)
+#define pe_log_rate_limited_fl(rate, level, format, args...) \
+		pe_log_rate_limited(rate, level, FL(format), ## args)
+#define pe_alert_rate_limited(rate, format, args...) \
+		pe_log_rate_limited_fl(rate, QDF_TRACE_LEVEL_FATAL,\
+			format, ## args)
+#define pe_err_rate_limited(rate, format, args...) \
+		pe_log_rate_limited_fl(rate, QDF_TRACE_LEVEL_ERROR,\
+			format, ## args)
+#define pe_warn_rate_limited(rate, format, args...) \
+		pe_log_rate_limited_fl(rate, QDF_TRACE_LEVEL_WARN,\
+			format, ## args)
+#define pe_notice_rate_limited(rate, format, args...) \
+		pe_log_rate_limited_fl(rate, QDF_TRACE_LEVEL_INFO,\
+			format, ## args)
+#define pe_info_rate_limited(rate, format, args...) \
+		pe_log_rate_limited_fl(rate, QDF_TRACE_LEVEL_INFO,\
+			format, ## args)
+#define pe_debug_rate_limited(rate, format, args...) \
+		pe_log_rate_limited_fl(rate, QDF_TRACE_LEVEL_DEBUG,\
+			format, ## args)
 
-#define pe_nofl_alert(params...)
-#define pe_nofl_err(params...)
-#define pe_nofl_warn(params...)
-#define pe_nofl_info(params...)
-#define pe_nofl_debug(params...)
+#define pe_log(level, args...) QDF_TRACE(QDF_MODULE_ID_PE, level, ## args)
+#define pe_logfl(level, format, args...) pe_log(level, FL(format), ## args)
 
-#define PE_ENTER()
-#define PE_EXIT()
+#define pe_alert(format, args...) \
+		pe_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
+#define pe_err(format, args...) \
+		pe_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
+#define pe_warn(format, args...) \
+		pe_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
+#define pe_info(format, args...) \
+		pe_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
+#define pe_debug(format, args...) \
+		pe_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+
+#define PE_ENTER() pe_logfl(QDF_TRACE_LEVEL_DEBUG, "enter")
+#define PE_EXIT() pe_logfl(QDF_TRACE_LEVEL_DEBUG, "exit")
+
+
 #endif

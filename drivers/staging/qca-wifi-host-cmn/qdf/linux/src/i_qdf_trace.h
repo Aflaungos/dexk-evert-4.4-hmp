@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,14 +29,12 @@
 /* older kernels have a bug in kallsyms, so ensure module.h is included */
 #include <linux/module.h>
 #include <linux/kallsyms.h>
-#ifdef CONFIG_QCA_MINIDUMP
-#include <linux/minidump_tlv.h>
-#endif
 
 #if !defined(__printf)
 #define __printf(a, b)
 #endif
 
+#ifdef CONFIG_MCL
 /* QDF_TRACE is the macro invoked to add trace messages to code.  See the
  * documenation for qdf_trace_msg() for the parameters etc. for this function.
  *
@@ -47,173 +45,88 @@
  * This allows us to build 'performance' builds where we can measure performance
  * without being bogged down by all the tracing in the code
  */
-#define QDF_MAX_LOGS_PER_SEC 2
-/**
- * __QDF_TRACE_RATE_LIMITED() - rate limited version of QDF_TRACE
- * @params: parameters to pass through to QDF_TRACE
- *
- * This API prevents logging a message more than QDF_MAX_LOGS_PER_SEC times per
- * second. This means any subsequent calls to this API from the same location
- * within 1/QDF_MAX_LOGS_PER_SEC seconds will be dropped.
- *
- * Return: None
- */
+#if defined(WLAN_DEBUG) || defined(DEBUG)
+#define QDF_TRACE qdf_trace_msg
+#define QDF_VTRACE qdf_vtrace_msg
+#define QDF_TRACE_HEX_DUMP qdf_trace_hex_dump
+#define QDF_TRACE_RATE_LIMITED(rate, module, level, format, ...)\
+	do {\
+		static int rate_limit;\
+		rate_limit++;\
+		if (rate)\
+			if (0 == (rate_limit % rate))\
+				qdf_trace_msg(module, level, format,\
+						##__VA_ARGS__);\
+	} while (0)
+#else
 #define QDF_TRACE(arg ...)
 #define QDF_VTRACE(arg ...)
 #define QDF_TRACE_HEX_DUMP(arg ...)
-#define __QDF_TRACE_RATE_LIMITED(params...)
-#if defined(QDF_TRACE_PRINT_ENABLE)
-#define qdf_trace(log_level, args...)
+#define QDF_TRACE_RATE_LIMITED(arg ...)
 #endif
-#define __QDF_TRACE_HEX_DUMP_RATE_LIMITED(arg ...)
+#else
 
-#define __QDF_TRACE_NO_FL(log_level, module_id, format, args...)
+#define qdf_trace(log_level, args...) \
+		do {	\
+			extern int qdf_dbg_mask; \
+			if (qdf_dbg_mask >= log_level) { \
+				printk("qdf: "args); \
+				printk("\n"); \
+			} \
+		} while (0)
+#define QDF_TRACE(x, y, args...) printk(args)
 
-#define __QDF_TRACE_FL(log_level, module_id, format, args...)
-
-#define __QDF_TRACE_RL(log_level, module_id, format, args...)
-
-#define __QDF_TRACE_RL_NO_FL(log_level, module_id, format, args...)
-
-#define __QDF_TRACE_HEX_DUMP_RL(log_level, module_id, args...)
-#define QDF_TRACE_FATAL(params...)
-#define QDF_TRACE_FATAL_NO_FL(params...)
-#define QDF_TRACE_FATAL_RL(params...)
-#define QDF_TRACE_FATAL_RL_NO_FL(params...)
-#define QDF_VTRACE_FATAL(params...)
-#define QDF_TRACE_HEX_DUMP_FATAL_RL(params...)
-
-#define QDF_TRACE_ERROR(params...)
-#define QDF_TRACE_ERROR_NO_FL(params...)
-#define QDF_TRACE_ERROR_RL(params...)
-#define QDF_TRACE_ERROR_RL_NO_FL(params...)
-#define QDF_VTRACE_ERROR(params...)
-#define QDF_TRACE_HEX_DUMP_ERROR_RL(params...)
-
-#define QDF_TRACE_WARN(params...)
-#define QDF_TRACE_WARN_NO_FL(params...)
-#define QDF_TRACE_WARN_RL(params...)
-#define QDF_TRACE_WARN_RL_NO_FL(params...)
-#define QDF_VTRACE_WARN(params...)
-#define QDF_TRACE_HEX_DUMP_WARN_RL(params...)
-
-#define QDF_TRACE_INFO(params...)
-#define QDF_TRACE_INFO_NO_FL(params...)
-#define QDF_TRACE_INFO_RL(params...)
-#define QDF_TRACE_INFO_RL_NO_FL(params...)
-#define QDF_VTRACE_INFO(params...)
-#define QDF_TRACE_HEX_DUMP_INFO_RL(params...)
-
-#define QDF_TRACE_DEBUG(params...)
-#define QDF_TRACE_DEBUG_NO_FL(params...)
-#define QDF_TRACE_DEBUG_RL(params...)
-#define QDF_TRACE_DEBUG_RL_NO_FL(params...)
-#define QDF_VTRACE_DEBUG(params...)
-#define QDF_TRACE_HEX_DUMP_DEBUG_RL(params...)
-
-#define QDF_TRACE_ENTER(params...)
-#define QDF_TRACE_EXIT(params...)
+#endif /* CONFIG_MCL */
 
 #define QDF_ENABLE_TRACING
 #define qdf_scnprintf scnprintf
 
+#ifdef QDF_ENABLE_TRACING
+
+#define QDF_ASSERT(_condition) \
+	do { \
+		if (!(_condition)) { \
+			pr_err("QDF ASSERT in %s Line %d\n", \
+			       __func__, __LINE__); \
+			WARN_ON(1); \
+		} \
+	} while (0)
+
+#else
+
+/* This code will be used for compilation if tracing is to be compiled out */
+/* of the code so these functions/macros are 'do nothing' */
+static inline void qdf_trace_msg(QDF_MODULE_ID module, ...)
+{
+}
+
 #define QDF_ASSERT(_condition)
 
-static inline void qdf_vprint(const char *fmt, va_list args) {}
+#endif
+
 #ifdef PANIC_ON_BUG
-#ifdef CONFIG_SLUB_DEBUG
-/**
- * __qdf_bug() - Calls BUG() when the PANIC_ON_BUG compilation option is enabled
- *
- * Note: Calling BUG() can cause a compiler to assume any following code is
- * unreachable. Because these BUG's may or may not be enabled by the build
- * configuration, this can cause developers some pain. Consider:
- *
- *	bool bit;
- *
- *	if (ptr)
- *		bit = ptr->returns_bool();
- *	else
- *		__qdf_bug();
- *
- *	// do stuff with @bit
- *
- *	return bit;
- *
- * In this case, @bit is potentially uninitialized when we return! However, the
- * compiler can correctly assume this case is impossible when PANIC_ON_BUG is
- * enabled. Because developers typically enable this feature, the "maybe
- * uninitialized" warning will not be emitted, and the bug remains uncaught
- * until someone tries to make a build without PANIC_ON_BUG.
- *
- * A simple workaround for this, is to put the definition of __qdf_bug in
- * another compilation unit, which prevents the compiler from assuming
- * subsequent code is unreachable. For CONFIG_SLUB_DEBUG, do this to catch more
- * bugs. Otherwise, use the typical inlined approach.
- *
- * Return: None
- */
-void __qdf_bug(void);
-#else /* CONFIG_SLUB_DEBUG */
-static inline void __qdf_bug(void)
-{
-	BUG();
-}
-#endif /* CONFIG_SLUB_DEBUG */
-
-/**
- * QDF_DEBUG_PANIC() - In debug builds, panic, otherwise do nothing
- * @reason_fmt: a format string containing the reason for the panic
- * @args: zero or more printf compatible logging arguments
- *
- * Return: None
- */
-#define QDF_DEBUG_PANIC(reason_fmt, args...)
-
-/**
- * QDF_DEBUG_PANIC_FL() - In debug builds, panic, otherwise do nothing
- * @func: origin function name to be logged
- * @line: origin line number to be logged
- * @fmt: printf compatible format string to be logged
- * @args: zero or more printf compatible logging arguments
- *
- * Return: None
- */
-#define QDF_DEBUG_PANIC_FL(func, line, fmt, args...) \
-	do { \
-		pr_err("WLAN Panic @ %s:%d: " fmt "\n", func, line, ##args); \
-		__qdf_bug(); \
-	} while (false)
 
 #define QDF_BUG(_condition) \
 	do { \
 		if (!(_condition)) { \
-			pr_err("QDF BUG in %s Line %d: Failed assertion '" \
-			       #_condition "'\n", __func__, __LINE__); \
-			__qdf_bug(); \
+			pr_err("QDF BUG in %s Line %d\n", \
+			       __func__, __LINE__); \
+			BUG_ON(1); \
 		} \
 	} while (0)
 
-#else /* PANIC_ON_BUG */
-
-#define QDF_DEBUG_PANIC(reason...) \
-	do { \
-		/* no-op */ \
-	} while (false)
-
-#define QDF_DEBUG_PANIC_FL(func, line, fmt, args...) \
-	do { \
-		/* no-op */ \
-	} while (false)
+#else
 
 #define QDF_BUG(_condition) \
 	do { \
 		if (!(_condition)) { \
-			/* no-op */ \
+			pr_err("QDF BUG in %s Line %d\n", \
+			       __func__, __LINE__); \
+			WARN_ON(1); \
 		} \
 	} while (0)
 
-#endif /* PANIC_ON_BUG */
+#endif
 
 #ifdef KSYM_SYMBOL_LEN
 #define __QDF_SYMBOL_LEN KSYM_SYMBOL_LEN
@@ -221,8 +134,4 @@ static inline void __qdf_bug(void)
 #define __QDF_SYMBOL_LEN 1
 #endif
 
-static inline void
-__qdf_minidump_log(void *start_addr, size_t size, const char *name) {}
-static inline void
-__qdf_minidump_remove(void *addr) {}
 #endif /* __I_QDF_TRACE_H */

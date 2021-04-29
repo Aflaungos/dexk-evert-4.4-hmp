@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -36,9 +36,16 @@
 #include <wlan_hdd_main.h>
 #include "qdf_nbuf.h"
 #include "qdf_mem.h"
-#include "cds_utils.h"
 
 #define TX_PKT_MIN_HEADROOM          (64)
+
+/* Protocol specific packet tracking feature */
+#define CDS_PKT_TRAC_ETH_TYPE_OFFSET (12)
+#define CDS_PKT_TRAC_IP_OFFSET       (14)
+#define CDS_PKT_TRAC_IP_HEADER_SIZE  (20)
+#define CDS_PKT_TRAC_DHCP_SRV_PORT   (67)
+#define CDS_PKT_TRAC_DHCP_CLI_PORT   (68)
+#define CDS_PKT_TRAC_EAPOL_ETH_TYPE  (0x888E)
 
 /**
  * cds_pkt_return_packet  Free the cds Packet
@@ -47,7 +54,7 @@
 QDF_STATUS cds_pkt_return_packet(cds_pkt_t *packet)
 {
 	/* Validate the input parameter pointer */
-	if (unlikely(!packet)) {
+	if (unlikely(packet == NULL)) {
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -81,9 +88,10 @@ QDF_STATUS
 cds_pkt_get_packet_length(cds_pkt_t *pPacket, uint16_t *pPacketSize)
 {
 	/* Validate the parameter pointers */
-	if (unlikely((!pPacket) || (!pPacketSize)) ||
-	    (!pPacket->pkt_buf)) {
-		cds_alert("NULL pointer");
+	if (unlikely((pPacket == NULL) || (pPacketSize == NULL)) ||
+	    (pPacket->pkt_buf == NULL)) {
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+			  "VPKT [%d]: NULL pointer", __LINE__);
 		return QDF_STATUS_E_INVAL;
 	}
 	/* return the requested information */
@@ -107,7 +115,7 @@ QDF_STATUS cds_packet_alloc_debug(uint16_t size, void **data, void **ppPacket,
 		TX_PKT_MIN_HEADROOM, sizeof(uint32_t), false,
 				     file_name, line_num);
 
-	if (nbuf) {
+	if (nbuf != NULL) {
 		qdf_nbuf_put_tail(nbuf, size);
 		qdf_nbuf_set_protocol(nbuf, ETH_P_CONTROL);
 		*ppPacket = nbuf;
@@ -130,7 +138,7 @@ QDF_STATUS cds_packet_alloc(uint16_t size, void **data, void **ppPacket)
 	nbuf = qdf_nbuf_alloc(NULL, roundup(size + TX_PKT_MIN_HEADROOM, 4),
 			      TX_PKT_MIN_HEADROOM, sizeof(uint32_t), false);
 
-	if (nbuf) {
+	if (nbuf != NULL) {
 		qdf_nbuf_put_tail(nbuf, size);
 		qdf_nbuf_set_protocol(nbuf, ETH_P_CONTROL);
 		*ppPacket = nbuf;

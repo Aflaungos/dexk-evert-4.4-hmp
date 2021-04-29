@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -20,7 +20,6 @@
 #include "htc_internal.h"
 #include <hif.h>
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
-#include "qdf_module.h"
 
 /* use credit flow control over HTC */
 unsigned int htc_credit_flow = 1;
@@ -135,7 +134,7 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 			/* allocate a packet to send to the target */
 			pSendPacket = htc_alloc_control_tx_packet(target);
 
-			if (!pSendPacket) {
+			if (NULL == pSendPacket) {
 				AR_DEBUG_ASSERT(false);
 				status = QDF_STATUS_E_NOMEM;
 				break;
@@ -153,7 +152,7 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 			pConnectMsg =
 			    (HTC_CONNECT_SERVICE_MSG *) qdf_nbuf_data(netbuf);
 
-			if (!pConnectMsg) {
+			if (NULL == pConnectMsg) {
 				AR_DEBUG_ASSERT(0);
 				status = QDF_STATUS_E_FAULT;
 				break;
@@ -183,7 +182,7 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 				disableCreditFlowCtrl = true;
 
 			/* check caller if it wants to transfer meta data */
-			if ((pConnectReq->pMetaData) &&
+			if ((pConnectReq->pMetaData != NULL) &&
 			    (pConnectReq->MetaDataLength <=
 			     HTC_SERVICE_META_DATA_MAX_LENGTH)) {
 				/* copy meta data into msg buffer (after hdr) */
@@ -282,7 +281,7 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 			assignedEndpoint = (HTC_ENDPOINT_ID) rsp_msg_end_id;
 			maxMsgSize = rsp_msg_max_msg_size;
 
-			if ((pConnectResp->pMetaData) &&
+			if ((pConnectResp->pMetaData != NULL) &&
 			    (rsp_msg_serv_meta_len > 0) &&
 			    (rsp_msg_serv_meta_len <=
 			     HTC_SERVICE_META_DATA_MAX_LENGTH)) {
@@ -341,14 +340,13 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 		if (maxMsgSize % target->TargetCreditSize)
 			pEndpoint->TxCreditsPerMaxMsg++;
 #if DEBUG_CREDIT
-		qdf_print(" Endpoint%d initial credit:%d, size:%d.",
+		qdf_print(" Endpoint%d initial credit:%d, size:%d.\n",
 			  pEndpoint->Id, pEndpoint->TxCredits,
 			  pEndpoint->TxCreditSize);
 #endif
 
 		/* copy all the callbacks */
 		pEndpoint->EpCallBacks = pConnectReq->EpCallbacks;
-		pEndpoint->async_update = 0;
 
 		status = hif_map_service_to_pipe(target->hif_dev,
 						 pEndpoint->service_id,
@@ -375,14 +373,17 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 				QDF_TIMER_TYPE_SW);
 		}
 
-		HTC_TRACE("SVC:0x%4.4X, ULpipe:%d DLpipe:%d id:%d Ready",
-			  pEndpoint->service_id, pEndpoint->UL_PipeID,
-			  pEndpoint->DL_PipeID, pEndpoint->Id);
+		AR_DEBUG_PRINTF(ATH_DEBUG_INFO,
+				("SVC:0x%4.4X, ULpipe:%d DLpipe:%d id:%d Ready",
+				 pEndpoint->service_id, pEndpoint->UL_PipeID,
+				 pEndpoint->DL_PipeID, pEndpoint->Id));
 
 		if (disableCreditFlowCtrl && pEndpoint->TxCreditFlowEnabled) {
 			pEndpoint->TxCreditFlowEnabled = false;
-			HTC_TRACE("SVC:0x%4.4X ep:%d TX flow control disabled",
-				  pEndpoint->service_id, assignedEndpoint);
+			AR_DEBUG_PRINTF(ATH_DEBUG_INFO,
+					("SVC:0x%4.4X ep:%d TX flow control disabled",
+					 pEndpoint->service_id,
+					 assignedEndpoint));
 		}
 
 	} while (false);
@@ -391,7 +392,6 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 
 	return status;
 }
-qdf_export_symbol(htc_connect_service);
 
 void htc_set_credit_distribution(HTC_HANDLE HTCHandle,
 				 void *pCreditDistContext,
@@ -412,19 +412,6 @@ void htc_fw_event_handler(void *context, QDF_STATUS status)
 	struct htc_init_info *initInfo = &target->HTCInitInfo;
 
 	/* check if target failure handler exists and pass error code to it. */
-	if (target->HTCInitInfo.TargetFailure)
+	if (target->HTCInitInfo.TargetFailure != NULL)
 		initInfo->TargetFailure(initInfo->pContext, status);
 }
-
-
-void htc_set_async_ep(HTC_HANDLE HTCHandle,
-			HTC_ENDPOINT_ID htc_ep_id, bool value)
-{
-	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(HTCHandle);
-	HTC_ENDPOINT *pEndpoint = &target->endpoint[htc_ep_id];
-
-	pEndpoint->async_update = value;
-	qdf_print("%s: htc_handle %pK, ep %d, value %d", __func__,
-		  HTCHandle, htc_ep_id, value);
-}
-

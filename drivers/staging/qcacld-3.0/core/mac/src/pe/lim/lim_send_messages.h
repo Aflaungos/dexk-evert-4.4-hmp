@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -34,67 +34,47 @@
 #include "lim_types.h"
 #include "wma_if.h"
 #include "sir_params.h"
-QDF_STATUS lim_send_beacon_params(struct mac_context *mac,
+tSirRetStatus lim_send_beacon_params(tpAniSirGlobal pMac,
 				     tpUpdateBeaconParams pUpdatedBcnParams,
-				     struct pe_session *pe_session);
-/* QDF_STATUS lim_send_beacon_params(struct mac_context *mac, tpUpdateBeaconParams pUpdatedBcnParams); */
-QDF_STATUS lim_send_mode_update(struct mac_context *mac,
+				     tpPESession psessionEntry);
+/* tSirRetStatus lim_send_beacon_params(tpAniSirGlobal pMac, tpUpdateBeaconParams pUpdatedBcnParams); */
+tSirRetStatus lim_send_mode_update(tpAniSirGlobal pMac,
 				   tUpdateVHTOpMode *tempParam,
-				   struct pe_session *pe_session);
-QDF_STATUS lim_send_rx_nss_update(struct mac_context *mac,
+				   tpPESession psessionEntry);
+tSirRetStatus lim_send_rx_nss_update(tpAniSirGlobal pMac,
 				     tUpdateRxNss *tempParam,
-				     struct pe_session *pe_session);
+				     tpPESession psessionEntry);
 
-QDF_STATUS lim_set_membership(struct mac_context *mac,
+tSirRetStatus lim_set_membership(tpAniSirGlobal pMac,
 				 tUpdateMembership *pTempParam,
-				 struct pe_session *pe_session);
+				 tpPESession psessionEntry);
 
-QDF_STATUS lim_set_user_pos(struct mac_context *mac,
+tSirRetStatus lim_set_user_pos(tpAniSirGlobal pMac,
 			       tUpdateUserPos *pTempParam,
-			       struct pe_session *pe_session);
+			       tpPESession psessionEntry);
+tSirRetStatus lim_send_switch_chnl_params(tpAniSirGlobal pMac,
+					  uint8_t chnlNumber,
+					  uint8_t ch_center_freq_seg0,
+					  uint8_t ch_center_freq_seg1,
+					  enum phy_ch_width ch_width,
+					  int8_t maxTxPower,
+					  uint8_t peSessionId,
+					  uint8_t is_restart);
 
-/**
- * lim_send_switch_chnl_params() - change channel
- * @mac: pointer to Global MAC structure
- * @session: pe session
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS lim_send_switch_chnl_params(struct mac_context *mac,
-				       struct pe_session *session);
-
-/**
- * lim_send_edca_params() - Send edsa params to firmware
- * @mac: pointer to Global MAC structure
- * @pUpdatedEdcaParams: updated edca params
- * @vdev_id: vdev id
- * @mu_edca: MU edca
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS lim_send_edca_params(struct mac_context *mac,
-				tSirMacEdcaParamRecord *pUpdatedEdcaParams,
-				uint16_t vdev_id, bool mu_edca);
-/**
- * lim_set_active_edca_params() - Choose best EDCA parameters
- * @mac_ctx:  pointer to Global Mac structure.
- * @edca_params: pointer to the local EDCA parameters
- * @pe_session: point to the session entry
- *
- *  This function is called to set the most up-to-date EDCA parameters
- *  given the default local EDCA parameters.  The rules are as following:
- *  - If ACM bit is set for all ACs, then downgrade everything to Best Effort.
- *  - If ACM is not set for any AC, then PE will use the default EDCA
- *    parameters as advertised by AP.
- *  - If ACM is set in any of the ACs, PE will use the EDCA parameters
- *    from the next best AC for which ACM is not enabled.
- *
- * Return: none
- */
-void lim_set_active_edca_params(struct mac_context *mac_ctx,
-				tSirMacEdcaParamRecord *edca_params,
-				struct pe_session *pe_session);
-
+tSirRetStatus lim_send_edca_params(tpAniSirGlobal pMac,
+				   tSirMacEdcaParamRecord *pUpdatedEdcaParams,
+				   uint16_t bssIdx);
+tSirRetStatus lim_set_link_state(tpAniSirGlobal pMac, tSirLinkState state,
+				 tSirMacAddr bssId, tSirMacAddr selfMac,
+				 tpSetLinkStateCallback callback,
+				 void *callbackArg);
+extern tSirRetStatus lim_set_link_state_ft(tpAniSirGlobal pMac, tSirLinkState
+					   state, tSirMacAddr bssId,
+					   tSirMacAddr selfMacAddr, int ft,
+					   tpPESession psessionEntry);
+void lim_set_active_edca_params(tpAniSirGlobal pMac,
+				tSirMacEdcaParamRecord *plocalEdcaParams,
+				tpPESession psessionEntry);
 #define CAPABILITY_FILTER_MASK  0x73CF
 #define ERP_FILTER_MASK         0xF8
 #define EDCA_FILTER_MASK        0xF0
@@ -105,13 +85,16 @@ void lim_set_active_edca_params(struct mac_context *mac_ctx,
 #define DS_PARAM_CHANNEL_MASK   0x0
 #define VHTOP_CHWIDTH_MASK      0xFC
 
+tSirRetStatus lim_send_beacon_filter_info(tpAniSirGlobal pMac,
+					  tpPESession psessionEntry);
+
 #ifdef WLAN_FEATURE_11W
-QDF_STATUS lim_send_exclude_unencrypt_ind(struct mac_context *mac,
+tSirRetStatus lim_send_exclude_unencrypt_ind(tpAniSirGlobal pMac,
 					     bool excludeUnenc,
-					     struct pe_session *pe_session);
+					     tpPESession psessionEntry);
 #endif
-QDF_STATUS lim_send_ht40_obss_scanind(struct mac_context *mac_ctx,
-						struct pe_session *session);
-void lim_handle_sme_join_result(struct mac_context *,
-		tSirResultCodes, uint16_t, struct pe_session *);
+tSirRetStatus lim_send_ht40_obss_scanind(tpAniSirGlobal mac_ctx,
+						tpPESession session);
+void lim_handle_sme_join_result(tpAniSirGlobal,
+		tSirResultCodes, uint16_t, tpPESession);
 #endif

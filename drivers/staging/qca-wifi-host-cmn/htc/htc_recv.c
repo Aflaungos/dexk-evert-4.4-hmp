@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18,7 +18,6 @@
 
 #include "htc_debug.h"
 #include "htc_internal.h"
-#include "htc_credit_history.h"
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
 
 /* HTC Control message receive timeout msec */
@@ -76,7 +75,7 @@ static A_STATUS htc_process_trailer(HTC_TARGET *target,
 static void do_recv_completion_pkt(HTC_ENDPOINT *pEndpoint,
 				   HTC_PACKET *pPacket)
 {
-	if (!pEndpoint->EpCallBacks.EpRecv) {
+	if (pEndpoint->EpCallBacks.EpRecv == NULL) {
 		AR_DEBUG_PRINTF(ATH_DEBUG_ERR,
 				("HTC ep %d has NULL recv callback on packet %pK\n",
 				 pEndpoint->Id,
@@ -106,6 +105,15 @@ static void do_recv_completion(HTC_ENDPOINT *pEndpoint,
 		pPacket = htc_packet_dequeue(pQueueToIndicate);
 		do_recv_completion_pkt(pEndpoint, pPacket);
 	}
+}
+
+static void recv_packet_completion(HTC_TARGET *target, HTC_ENDPOINT *pEndpoint,
+				   HTC_PACKET *pPacket)
+{
+	do_recv_completion_pkt(pEndpoint, pPacket);
+
+	/* recover the packet container */
+	free_htc_packet_container(target, pPacket);
 }
 
 void htc_control_rx_complete(void *Context, HTC_PACKET *pPacket)
@@ -146,7 +154,7 @@ HTC_PACKET *allocate_htc_packet_container(HTC_TARGET *target)
 
 	LOCK_HTC_RX(target);
 
-	if (!target->pHTCPacketStructPool) {
+	if (NULL == target->pHTCPacketStructPool) {
 		UNLOCK_HTC_RX(target);
 		return NULL;
 	}
@@ -165,7 +173,7 @@ void free_htc_packet_container(HTC_TARGET *target, HTC_PACKET *pPacket)
 	pPacket->ListLink.pPrev = NULL;
 
 	LOCK_HTC_RX(target);
-	if (!target->pHTCPacketStructPool) {
+	if (NULL == target->pHTCPacketStructPool) {
 		target->pHTCPacketStructPool = pPacket;
 		pPacket->ListLink.pNext = NULL;
 	} else {
@@ -197,7 +205,7 @@ qdf_nbuf_t rx_sg_to_single_netbuf(HTC_TARGET *target)
 	}
 
 	new_skb = qdf_nbuf_alloc(target->ExpRxSgTotalLen, 0, 4, false);
-	if (!new_skb) {
+	if (new_skb == NULL) {
 		AR_DEBUG_PRINTF(ATH_DEBUG_ERR,
 				("rx_sg_to_single_netbuf: can't allocate %u size netbuf\n",
 				 target->ExpRxSgTotalLen));
@@ -214,7 +222,7 @@ qdf_nbuf_t rx_sg_to_single_netbuf(HTC_TARGET *target)
 		anbdata_new += qdf_nbuf_len(skb);
 		qdf_nbuf_free(skb);
 		skb = qdf_nbuf_queue_remove(rx_sg_queue);
-	} while (skb);
+	} while (skb != NULL);
 
 	RESET_RX_SG_CONFIG(target);
 	return new_skb;
@@ -229,6 +237,10 @@ _failed:
 }
 #endif
 
+#ifdef CONFIG_WIN
+#define HTC_MSG_NACK_SUSPEND 7
+#endif
+
 QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 				   uint8_t pipeID)
 {
@@ -237,15 +249,11 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 	HTC_TARGET *target = (HTC_TARGET *) Context;
 	uint8_t *netdata;
 	uint32_t netlen;
-	HTC_ENDPOINT *pEndpoint, *currendpoint;
+	HTC_ENDPOINT *pEndpoint;
 	HTC_PACKET *pPacket;
 	uint16_t payloadLen;
 	uint32_t trailerlen = 0;
 	uint8_t htc_ep_id;
-	int i;
-#ifdef HTC_MSG_WAKEUP_FROM_SUSPEND_ID
-	struct htc_init_info *info;
-#endif
 
 #ifdef RX_SG_SUPPORT
 	LOCK_HTC_RX(target);
@@ -254,7 +262,7 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 		qdf_nbuf_queue_add(&target->RxSgQueue, netbuf);
 		if (target->CurRxSgTotalLen == target->ExpRxSgTotalLen) {
 			netbuf = rx_sg_to_single_netbuf(target);
-			if (!netbuf) {
+			if (netbuf == NULL) {
 				UNLOCK_HTC_RX(target);
 				goto _out;
 			}
@@ -284,13 +292,7 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 					sizeof(HTC_FRAME_HDR),
 					"BAD HTC Header");
 			status = QDF_STATUS_E_FAILURE;
-			DPTRACE(qdf_dp_trace(
-					    netbuf,
-					    QDF_DP_TRACE_HTC_PACKET_PTR_RECORD,
-					    QDF_TRACE_DEFAULT_PDEV_ID,
-					    qdf_nbuf_data_addr(netbuf),
-					    sizeof(qdf_nbuf_data(netbuf)),
-					    QDF_RX));
+			QDF_BUG(0);
 			break;
 		}
 
@@ -302,17 +304,8 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 		 * than interrupt driven, this is a good point to ask HIF to
 		 * check whether it has any completed sends to handle.
 		 */
-		if (pEndpoint->ul_is_polled) {
-			for (i = 0; i < ENDPOINT_MAX; i++) {
-				currendpoint = &target->endpoint[i];
-				if ((currendpoint->DL_PipeID ==
-				     pEndpoint->DL_PipeID) &&
-				    currendpoint->ul_is_polled) {
-					htc_send_complete_check(currendpoint,
-								1);
-				}
-			}
-		}
+		if (pEndpoint->ul_is_polled)
+			htc_send_complete_check(pEndpoint, 1);
 
 		payloadLen = HTC_GET_FIELD(HtcHdr, HTC_FRAME_HDR, PAYLOADLEN);
 
@@ -335,13 +328,7 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 					 sizeof(HTC_FRAME_HDR),
 					 "BAD RX packet length");
 			status = QDF_STATUS_E_FAILURE;
-			DPTRACE(qdf_dp_trace(
-					    netbuf,
-					    QDF_DP_TRACE_HTC_PACKET_PTR_RECORD,
-					    QDF_TRACE_DEFAULT_PDEV_ID,
-					    qdf_nbuf_data_addr(netbuf),
-					    sizeof(qdf_nbuf_data(netbuf)),
-					    QDF_RX));
+			QDF_BUG(0);
 			break;
 #endif
 		}
@@ -440,14 +427,16 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 			case HTC_MSG_WAKEUP_FROM_SUSPEND_ID:
 				AR_DEBUG_PRINTF(ATH_DEBUG_ANY,
 					("Received initial wake up"));
+				LOCK_HTC_CREDIT(target);
 				htc_credit_record(HTC_INITIAL_WAKE_UP,
 					pEndpoint->TxCredits,
 					HTC_PACKET_QUEUE_DEPTH(
-					&pEndpoint->TxQueue));
-				info = &target->HTCInitInfo;
-				if (info && info->target_initial_wakeup_cb)
-					info->target_initial_wakeup_cb(
-						info->target_psoc);
+						&pEndpoint->TxQueue));
+				UNLOCK_HTC_CREDIT(target);
+				if (target->HTCInitInfo.
+						target_initial_wakeup_cb)
+					target->HTCInitInfo.
+						target_initial_wakeup_cb();
 				else
 					AR_DEBUG_PRINTF(ATH_DEBUG_ANY,
 						("No initial wake up cb"));
@@ -455,23 +444,28 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 #endif
 			case HTC_MSG_SEND_SUSPEND_COMPLETE:
 				wow_nack = false;
+				LOCK_HTC_CREDIT(target);
 				htc_credit_record(HTC_SUSPEND_ACK,
 					pEndpoint->TxCredits,
 					HTC_PACKET_QUEUE_DEPTH(
-					&pEndpoint->TxQueue));
+						&pEndpoint->TxQueue));
+				UNLOCK_HTC_CREDIT(target);
 				target->HTCInitInfo.TargetSendSuspendComplete(
-					target->HTCInitInfo.target_psoc,
+					target->HTCInitInfo.pContext,
 					wow_nack);
 
 				break;
 			case HTC_MSG_NACK_SUSPEND:
 				wow_nack = true;
+				LOCK_HTC_CREDIT(target);
 				htc_credit_record(HTC_SUSPEND_ACK,
 					pEndpoint->TxCredits,
 					HTC_PACKET_QUEUE_DEPTH(
-					&pEndpoint->TxQueue));
+						&pEndpoint->TxQueue));
+				UNLOCK_HTC_CREDIT(target);
+
 				target->HTCInitInfo.TargetSendSuspendComplete(
-					target->HTCInitInfo.target_psoc,
+					target->HTCInitInfo.pContext,
 					wow_nack);
 				break;
 			}
@@ -487,7 +481,7 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 		 * TODO_FIXME
 		 */
 		pPacket = allocate_htc_packet_container(target);
-		if (!pPacket) {
+		if (NULL == pPacket) {
 			status = QDF_STATUS_E_RESOURCES;
 			break;
 		}
@@ -500,11 +494,7 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 		qdf_nbuf_pull_head(netbuf, HTC_HEADER_LEN);
 		qdf_nbuf_set_pktlen(netbuf, pPacket->ActualLength);
 
-		do_recv_completion_pkt(pEndpoint, pPacket);
-
-		/* recover the packet container */
-		free_htc_packet_container(target, pPacket);
-
+		recv_packet_completion(target, pEndpoint, pPacket);
 		netbuf = NULL;
 
 	} while (false);
@@ -513,7 +503,7 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 _out:
 #endif
 
-	if (netbuf)
+	if (netbuf != NULL)
 		qdf_nbuf_free(netbuf);
 
 	return status;
@@ -531,15 +521,12 @@ A_STATUS htc_add_receive_pkt_multiple(HTC_HANDLE HTCHandle,
 
 	pFirstPacket = htc_get_pkt_at_head(pPktQueue);
 
-	if (!pFirstPacket) {
+	if (NULL == pFirstPacket) {
 		A_ASSERT(false);
 		return A_EINVAL;
 	}
 
-	if (pFirstPacket->Endpoint >= ENDPOINT_MAX) {
-		A_ASSERT(false);
-		return A_EINVAL;
-	}
+	AR_DEBUG_ASSERT(pFirstPacket->Endpoint < ENDPOINT_MAX);
 
 	AR_DEBUG_PRINTF(ATH_DEBUG_RECV,
 			("+- htc_add_receive_pkt_multiple : endPointId: %d, cnt:%d, length: %d\n",
@@ -587,7 +574,7 @@ void htc_flush_rx_hold_queue(HTC_TARGET *target, HTC_ENDPOINT *pEndpoint)
 
 	while (1) {
 		pPacket = htc_packet_dequeue(&pEndpoint->RxBufferHoldQueue);
-		if (!pPacket)
+		if (pPacket == NULL)
 			break;
 		UNLOCK_HTC_RX(target);
 		pPacket->Status = QDF_STATUS_E_CANCELED;
@@ -620,8 +607,6 @@ QDF_STATUS htc_wait_recv_ctrl_message(HTC_TARGET *target)
 	/* Wait for BMI request/response transaction to complete */
 	if (qdf_wait_single_event(&target->ctrl_response_valid,
 				  HTC_CONTROL_RX_TIMEOUT)) {
-		AR_DEBUG_PRINTF(ATH_DEBUG_ERR,
-			("Failed to receive control message\n"));
 		return QDF_STATUS_E_FAILURE;
 	}
 

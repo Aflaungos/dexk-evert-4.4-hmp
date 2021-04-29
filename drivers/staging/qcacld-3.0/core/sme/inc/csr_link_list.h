@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, 2014-2016, 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, 2014-2016 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -48,7 +48,11 @@ typedef struct tagDblLinkList {
 	tListElem ListHead;
 	qdf_mutex_t Lock;
 	uint32_t Count;
+	tHddHandle hHdd;
 	tListFlag Flag;
+	/*command debugging */
+	uint32_t cmdTimeoutDuration;       /* command timeout duration */
+	qdf_mc_timer_t *cmdTimeoutTimer;   /*command timeout Timer */
 } tDblLinkList;
 
 /*
@@ -64,10 +68,12 @@ typedef struct tagDblLinkList {
 	(((_Field) + ((_Boundary) - 1))  & ~((_Boundary) - 1))
 #define BITS_ON(_Field, _Bitmask)  ((_Field) |=  (_Bitmask))
 #define BITS_OFF(_Field, _Bitmask) ((_Field) &= ~(_Bitmask))
+#define CSR_MAX(a, b)  ((a) > (b) ? (a) : (b))
+#define CSR_MIN(a, b)  ((a) < (b) ? (a) : (b))
 #define csrIsListEmpty(pHead) ((pHead)->next == (pHead))
 
 uint32_t csr_ll_count(tDblLinkList *pList);
-QDF_STATUS csr_ll_open(tDblLinkList *pList);
+QDF_STATUS csr_ll_open(tHddHandle hHdd, tDblLinkList *pList);
 void csr_ll_close(tDblLinkList *pList);
 void csr_ll_lock(tDblLinkList *pList);
 void csr_ll_unlock(tDblLinkList *pList);

@@ -1,7 +1,8 @@
-if QCA_CLD_WLAN_A11 = y
+comment "Qualcomm Atheros CLD WLAN module"
 
 config QCA_CLD_WLAN
-	tristate "Qualcomm Atheros CLD WLAN module (CAF Android 11 Tag)"
+
+	tristate "Qualcomm Atheros CLD WLAN module"
 	default n
 	help
 	Add support for the Qualcomm Atheros CLD WLAN module
@@ -10,6 +11,14 @@ if QCA_CLD_WLAN != n
 
 config QCACLD_WLAN_LFR3
 	bool "Enable the WLAN Legacy Fast Roaming feature Version 3"
+	default n
+
+config PRIMA_WLAN_OKC
+	bool "Enable the Prima WLAN Opportunistic Key Caching feature"
+	default n
+
+config PRIMA_WLAN_11AC_HIGH_TP
+	bool "Enable the Prima WLAN 802.11ac High Throughput option (depends upon kernel support)"
 	default n
 
 config WLAN_FEATURE_11W
@@ -26,6 +35,11 @@ config QCOM_VOWIFI_11R
 
 config QCACLD_FEATURE_NAN
 	bool "Enable NAN feature"
+	default n
+
+config WLAN_FEATURE_NAN_DATAPATH
+	bool "Enable NaN Data Path feature"
+	depends on QCACLD_FEATURE_NAN
 	default n
 
 config QCACLD_FEATURE_GREEN_AP
@@ -110,12 +124,8 @@ config WLAN_FEATURE_DISA
 	bool "Enable DISA certification feature"
 	default n
 
-config WLAN_FEATURE_FIPS
-	bool "Enable FIPS certification feature"
-	default n
-
-config WLAN_FEATURE_11AX
-	bool "Enable 11AX(High Efficiency) feature"
+config WLAN_SPECTRAL_SCAN
+	bool "Enable Spectral Scan feature"
 	default n
 
 config ICMP_DISABLE_PS
@@ -126,25 +136,17 @@ config BUILD_TIMESTAMP
 	bool "Embed timestamp in wlan version"
 	default n
 
-config WLAN_FEATURE_FILS
-	bool "Enable FILS feature"
-	default n
-
-config NAN_CONVERGENCE
-	bool "Enable NAN_CONVERGENCE feature"
-	default n
-
-config WLAN_OBJMGR_DEBUG
-	bool "Enable WLAN Obj Mgr Debug services"
-	default n
-
-config WLAN_FEATURE_DFS_OFFLOAD
-	bool "Enable dfs offload feature"
-	default n
-
 config WLAN_FEATURE_SARV1_TO_SARV2
 	bool "Enable conversion of SAR v1 to v2 feature"
 	default n
 
+config WLAN_CHANNEL_ONE_SCAN
+	bool "Enable Wlan scan channel 1 twice"
+
+config WLAN_FEATURE_FILS
+	bool "Enable FILS_SK feature"
+
+config WLAN_FEATURE_PKT_CAPTURE
+	bool "Enable packet capture feature"
+
 endif # QCA_CLD_WLAN
-endif # QCA_CLD_WLAN_PIE_A11
