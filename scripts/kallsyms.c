@@ -372,11 +372,7 @@ static void write_src(void)
 	printf("\n");
 
 	output_label("kallsyms_num_syms");
-<<<<<<< HEAD
 	printf("\t.long\t%u\n", table_cnt);
-=======
-	printf("\tPTR\t%u\n", table_cnt);
->>>>>>> 16ffe1246f2b (scripts: Fixed printf format mismatch)
 	printf("\n");
 
 	/* table of offset markers, that give the offset in the compressed stream
