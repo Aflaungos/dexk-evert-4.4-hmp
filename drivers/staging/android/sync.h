@@ -302,6 +302,14 @@ void sync_fence_put(struct sync_fence *fence);
 void sync_fence_install(struct sync_fence *fence, int fd);
 
 /**
+ * sync_fence_signaled() - checks if the fence has already signaled
+ * @fence:		fence to check
+ *
+ * Returns true if @fence has already signaled.
+ */
+bool sync_fence_signaled(struct sync_fence *fence);
+
+/**
  * sync_fence_wait_async() - registers and async wait on the fence
  * @fence:		fence to wait on
  * @waiter:		waiter callback struck
@@ -338,20 +346,21 @@ int sync_fence_cancel_async(struct sync_fence *fence,
  */
 int sync_fence_wait(struct sync_fence *fence, long timeout);
 
-#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_DEBUG_TIMELINE)
+#ifdef CONFIG_DEBUG_FS
+
 void sync_timeline_debug_add(struct sync_timeline *obj);
 void sync_timeline_debug_remove(struct sync_timeline *obj);
 void sync_fence_debug_add(struct sync_fence *fence);
 void sync_fence_debug_remove(struct sync_fence *fence);
 void sync_dump(void);
-#else
-static void inline sync_timeline_debug_add(struct sync_timeline *obj) {}
-static void inline sync_timeline_debug_remove(struct sync_timeline *obj) {}
-static void inline sync_fence_debug_add(struct sync_fence *fence) {}
-static void inline sync_fence_debug_remove(struct sync_fence *fence) {}
-static void inline sync_dump(void) {}
-#endif
 
+#else
+# define sync_timeline_debug_add(obj)
+# define sync_timeline_debug_remove(obj)
+# define sync_fence_debug_add(fence)
+# define sync_fence_debug_remove(fence)
+# define sync_dump()
+#endif
 int sync_fence_wake_up_wq(wait_queue_t *curr, unsigned mode,
 				 int wake_flags, void *key);
 
