@@ -25,6 +25,7 @@
 #include <linux/clk.h>
 #include <linux/uaccess.h>
 #include <linux/msm-bus.h>
+#include <linux/pm_qos.h>
 #include <linux/dma-buf.h>
 
 #include "mdss.h"
@@ -41,255 +42,10 @@
 /* Master structure to hold all the information about the DSI/panel */
 static struct mdss_dsi_data *mdss_dsi_res;
 
-<<<<<<< HEAD
 #define DSI_DISABLE_PC_LATENCY 100
 #define DSI_ENABLE_PC_LATENCY PM_QOS_DEFAULT_VALUE
 
 static struct pm_qos_request mdss_dsi_pm_qos_request;
-=======
-extern int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, int first_cabc_state, int first_srgb_state, int first_gamma_state);
-
-
-#ifdef DSI_ACCESS
-
-static ssize_t dsi_access_sysfs_read_show(struct device *dev,
-		struct device_attribute *attr, char *buf);
-
-static ssize_t dsi_access_sysfs_read_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count);
-
-static ssize_t dsi_access_sysfs_write_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count);
-
-static DEVICE_ATTR(read, (S_IRUGO | S_IWUSR | S_IWGRP),
-		dsi_access_sysfs_read_show, dsi_access_sysfs_read_store);
-
-static DEVICE_ATTR(write, (S_IWUSR | S_IWGRP),
-		NULL, dsi_access_sysfs_write_store);
-
-static struct attribute *dsi_access_attrs[] = {
-	&dev_attr_read.attr,
-	&dev_attr_write.attr,
-	NULL,
-};
-
-struct dsi_access dsi_access;
-
-static struct mdss_dsi_ctrl_pdata *g_ctrl_pdata;
-
-static void dsi_access_parse_input(const char *buf)
-{
-	int retval;
-	int index;
-	char *input;
-	char *token;
-	unsigned long value;
-
-	index = 0;
-	input = (char *)buf;
-
-	while (input != NULL && index < BUFFER_LENGTH) {
-		token = strsep(&input, " ");
-		retval = kstrtoul(token, 16, &value);
-		if (retval < 0) {
-			pr_err("%s: Failed to convert \"%s\" to hex number\n",
-					__func__, token);
-			continue;
-		}
-		dsi_access.cmd_buffer[index] = (unsigned char)value;
-		index++;
-	}
-
-	if (index > 1)
-		dsi_access.cmd_length = index;
-
-	return;
-}
-
-static int dsi_access_send_cmd(struct mdss_dsi_ctrl_pdata *ctrl,
-		struct dsi_panel_cmds *pcmds, enum read_write rw)
-{
-	int retval;
-	struct dcs_cmd_req cmdreq;
-
-	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = pcmds->cmds;
-	cmdreq.cmds_cnt = pcmds->cmd_cnt;
-	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_HS_MODE;
-	cmdreq.rlen = 0;
-	cmdreq.cb = NULL;
-
-	if (rw == CMD_READ) {
-		cmdreq.flags |= CMD_REQ_RX;
-		cmdreq.rlen = dsi_access.read_length;
-		cmdreq.rbuf = dsi_access.read_buffer;
-	}
-
-	retval = mdss_dsi_cmdlist_put(ctrl, &cmdreq);
-
-	return retval;
-}
-
-static int dsi_access_do_read(void)
-{
-	int retval;
-	struct dsi_ctrl_hdr *dchdr;
-	struct mdss_dsi_ctrl_pdata *ctrl;
-
-	ctrl = g_ctrl_pdata;
-
-	if (dsi_access.desc_length < 9) {
-		kfree(dsi_access.desc_buffer);
-		dsi_access.desc_buffer = kzalloc(9, GFP_KERNEL);
-		dsi_access.desc_length = 9;
-	}
-
-	if (dsi_access.cmds.cmds == NULL) {
-		dsi_access.cmds.cmds = kzalloc(sizeof(struct dsi_cmd_desc),
-				GFP_KERNEL);
-	}
-
-	dsi_access.desc_buffer[0] = dsi_access.cmd_buffer[0];
-	dsi_access.desc_buffer[1] = 0x01;
-	dsi_access.desc_buffer[2] = 0x00;
-	dsi_access.desc_buffer[3] = 0x00;
-	dsi_access.desc_buffer[4] = 0x00;
-	dsi_access.desc_buffer[5] = 0x00;
-	dsi_access.desc_buffer[6] = 0x00;
-	dsi_access.desc_buffer[7] = dsi_access.cmd_buffer[1];
-	dsi_access.desc_buffer[8] = 0x00;
-
-	dchdr = (struct dsi_ctrl_hdr *)dsi_access.desc_buffer;
-	dchdr->dlen = 2;
-
-	dsi_access.cmds.cmds[0].dchdr = *dchdr;
-	dsi_access.cmds.cmds[0].payload = &dsi_access.desc_buffer[7];
-	dsi_access.cmds.cmd_cnt = 1;
-
-	retval = dsi_access_send_cmd(ctrl, &dsi_access.cmds, CMD_READ);
-	if (retval < 0)
-		return retval;
-
-	return retval;
-}
-
-static int dsi_access_do_write(void)
-{
-	int retval;
-	unsigned int desc_length;
-	struct dsi_ctrl_hdr *dchdr;
-	struct mdss_dsi_ctrl_pdata *ctrl;
-
-	ctrl = g_ctrl_pdata;
-
-	desc_length = sizeof(struct dsi_ctrl_hdr) + dsi_access.cmd_length - 1;
-	if (desc_length > dsi_access.desc_length) {
-		kfree(dsi_access.desc_buffer);
-		dsi_access.desc_buffer = kzalloc(desc_length, GFP_KERNEL);
-		dsi_access.desc_length = desc_length;
-	}
-
-	if (dsi_access.cmds.cmds == NULL) {
-		dsi_access.cmds.cmds = kzalloc(sizeof(struct dsi_cmd_desc),
-				GFP_KERNEL);
-	}
-
-	dsi_access.desc_buffer[0] = dsi_access.cmd_buffer[0];
-	dsi_access.desc_buffer[1] = 0x01;
-	dsi_access.desc_buffer[2] = 0x00;
-	dsi_access.desc_buffer[3] = 0x00;
-	dsi_access.desc_buffer[4] = 0x00;
-	dsi_access.desc_buffer[5] = 0x00;
-	dsi_access.desc_buffer[6] = 0x00;
-	memcpy(&dsi_access.desc_buffer[7], &dsi_access.cmd_buffer[1],
-			dsi_access.cmd_length - 1);
-
-	dchdr = (struct dsi_ctrl_hdr *)dsi_access.desc_buffer;
-	dchdr->dlen = dsi_access.cmd_length - 1;
-
-	dsi_access.cmds.cmds[0].dchdr = *dchdr;
-	dsi_access.cmds.cmds[0].payload = &dsi_access.desc_buffer[7];
-	dsi_access.cmds.cmd_cnt = 1;
-
-	retval = dsi_access_send_cmd(ctrl, &dsi_access.cmds, CMD_WRITE);
-
-	return retval;
-}
-
-static ssize_t dsi_access_sysfs_read_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	unsigned int idx;
-	unsigned int cnt;
-	unsigned int count;
-
-	count = 0;
-
-	for (idx = 0; idx < dsi_access.read_length - 1; idx++) {
-		cnt = snprintf(buf, PAGE_SIZE - count, "%02x ",
-				dsi_access.read_buffer[idx]);
-		buf += cnt;
-		count += cnt;
-	}
-
-	cnt = snprintf(buf, PAGE_SIZE - count, "%02x\n",
-			dsi_access.read_buffer[idx]);
-
-	count += cnt;
-
-	return count;
-}
-
-static ssize_t dsi_access_sysfs_read_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	int retval = -EINVAL;
-
-	dsi_access_parse_input(buf);
-
-	if (dsi_access.cmd_length > 2)
-		dsi_access.read_length = dsi_access.cmd_buffer[2];
-	else
-		dsi_access.read_length = 1;
-
-	if (dsi_access.cmd_length > 1) /* data type + command */
-		retval = dsi_access_do_read();
-	else
-		pr_err("%s: No valid command to send\n", __func__);
-
-	dsi_access.cmd_length = 0;
-
-	if (retval < 0)
-		return retval;
-	else
-		return count;
-}
-
-static ssize_t dsi_access_sysfs_write_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	int retval = -EINVAL;
-
-	dsi_access_parse_input(buf);
-
-	if (dsi_access.cmd_length > 1) /* data type + command */
-		retval = dsi_access_do_write();
-	else
-		pr_err("%s: No valid command to send\n", __func__);
-
-	dsi_access.cmd_length = 0;
-
-	if (retval < 0)
-		return retval;
-	else
-		return count;
-}
-#endif
->>>>>>> 95a13c60cae2 (msm: mdss: Remove duplicate pm_qos object used for unblanking)
 
 void mdss_dump_dsi_debug_bus(u32 bus_dump_flag,
 	u32 **dump_mem)
@@ -382,7 +138,6 @@ void mdss_dump_dsi_debug_bus(u32 bus_dump_flag,
 	pr_info("========End DSI Debug Bus=========\n");
 }
 
-<<<<<<< HEAD
 static void mdss_dsi_pm_qos_add_request(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct irq_info *irq_info;
@@ -442,10 +197,6 @@ static int mdss_dsi_hndl_enable_te(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	return 0;
 }
-=======
-static int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
-					bool active);
->>>>>>> 95a13c60cae2 (msm: mdss: Remove duplicate pm_qos object used for unblanking)
 
 static struct mdss_dsi_ctrl_pdata *mdss_dsi_get_ctrl(u32 ctrl_id)
 {
@@ -1955,6 +1706,7 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 			__func__, ctrl_pdata, ctrl_pdata->ndx,
 		pdata->panel_info.panel_power_state, ctrl_pdata->ctrl_state);
 
+	mdss_dsi_pm_qos_update_request(DSI_DISABLE_PC_LATENCY);
 
 	if (mdss_dsi_is_ctrl_clk_master(ctrl_pdata))
 		sctrl = mdss_dsi_get_ctrl_clk_slave();
@@ -2002,6 +1754,8 @@ error:
 	if (sctrl)
 		mdss_dsi_clk_ctrl(sctrl, sctrl->dsi_clk_handle,
 				  MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_OFF);
+
+	mdss_dsi_pm_qos_update_request(DSI_ENABLE_PC_LATENCY);
 
 	pr_debug("%s-:\n", __func__);
 
@@ -4129,6 +3883,7 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	pr_info("%s: Dsi Ctrl->%d initialized, DSI rev:0x%x, PHY rev:0x%x\n",
 		__func__, index, ctrl_pdata->shared_data->hw_rev,
 		ctrl_pdata->shared_data->phy_rev);
+	mdss_dsi_pm_qos_add_request(ctrl_pdata);
 
 	if (index == 0)
 		ctrl_pdata->shared_data->dsi0_active = true;
@@ -4337,6 +4092,7 @@ static int mdss_dsi_res_init(struct platform_device *pdev)
 		}
 
 		mutex_init(&sdata->phy_reg_lock);
+		mutex_init(&sdata->pm_qos_lock);
 
 		for (i = 0; i < DSI_CTRL_MAX; i++) {
 			mdss_dsi_res->ctrl_pdata[i] = devm_kzalloc(&pdev->dev,
@@ -4608,11 +4364,7 @@ static int mdss_dsi_ctrl_remove(struct platform_device *pdev)
 	}
 
 	fb_unregister_client(&ctrl_pdata->wake_notif);
-<<<<<<< HEAD
 	mdss_dsi_pm_qos_remove_request(ctrl_pdata->shared_data);
-=======
-	kthread_stop(ctrl_pdata->wake_thread);
->>>>>>> 95a13c60cae2 (msm: mdss: Remove duplicate pm_qos object used for unblanking)
 
 	if (msm_dss_config_vreg(&pdev->dev,
 			ctrl_pdata->panel_power_data.vreg_config,
