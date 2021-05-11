@@ -750,10 +750,7 @@ const char * const vmstat_text[] = {
 	"nr_dirtied",
 	"nr_written",
 	"nr_ion_heap",
-<<<<<<< HEAD
 	"nr_gpu_heap",
-=======
->>>>>>> 5117fc156d30 (mm: add ION heap-pool allocation stat into vmstat)
 	"nr_pages_scanned",
 #if IS_ENABLED(CONFIG_ZSMALLOC)
 	"nr_zspages",
