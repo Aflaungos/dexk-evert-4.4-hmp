@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 /* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
-=======
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
->>>>>>> c72a37336ddd (Merge tag 'LA.UM.8.2.r1-07500-sdm660.0' of https://source.codeaurora.org/quic/la/kernel/msm-4.4 into test)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
