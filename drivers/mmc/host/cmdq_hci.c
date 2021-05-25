@@ -898,11 +898,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 	unsigned long tag = 0, comp_status;
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
 	unsigned long err_info = 0;
-<<<<<<< HEAD
 	struct mmc_request *mrq;
-=======
-	struct mmc_request *mrq = NULL;
->>>>>>> 6b9b45d854d0 (drivers: mmc: host: fix clang warning)
 	int ret;
 	u32 dbr_set = 0;
 	u32 dev_pend_set = 0;
