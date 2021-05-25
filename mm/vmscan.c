@@ -3436,11 +3436,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 
 		/* Check if kswapd should be suspending */
 		if (try_to_freeze() || kthread_should_stop() ||
-<<<<<<< HEAD
 		    !atomic_long_read(&kswapd_waiters))
-=======
-		    !atomic_read(&pgdat->kswapd_waiters))
->>>>>>> 3821287c95bb (mm: Stop kswapd early when nothing's waiting for it to free pages)
 			break;
 
 		/*
