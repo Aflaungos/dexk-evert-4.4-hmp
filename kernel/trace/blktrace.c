@@ -1983,3 +1983,4 @@ void blk_fill_rwbs(char *rwbs, u32 rw, int bytes)
 EXPORT_SYMBOL_GPL(blk_fill_rwbs);
 
 #endif /* CONFIG_EVENT_TRACING */
+
