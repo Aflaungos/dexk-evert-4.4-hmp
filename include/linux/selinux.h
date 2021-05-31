@@ -18,6 +18,8 @@ struct selinux_audit_rule;
 struct audit_context;
 struct kern_ipc_perm;
 
+<<<<<<< HEAD
+=======
 struct file_security_struct {
 	u32 sid;		/* SID of open file description */
 	u32 fown_sid;		/* SID of file owner (for SIGIO) */
@@ -40,6 +42,7 @@ struct inode_security_struct {
 	struct mutex lock;
 };
 
+>>>>>>> c9458dfc41bd (selinux: implement sel_inode_cache file_security_cache from CAF A11 tag)
 #ifdef CONFIG_SECURITY_SELINUX
 
 /**

@@ -947,8 +947,10 @@ struct file {
 #ifdef CONFIG_FILE_TABLE_DEBUG
 	struct hlist_node f_hash;
 #endif /* #ifdef CONFIG_FILE_TABLE_DEBUG */
+<<<<<<< HEAD
+=======
 
-
+>>>>>>> c9458dfc41bd (selinux: implement sel_inode_cache file_security_cache from CAF A11 tag)
 } __attribute__((aligned(8)));
 
 struct file_handle {
