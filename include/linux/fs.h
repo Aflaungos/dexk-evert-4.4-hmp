@@ -947,17 +947,13 @@ struct file {
 #ifdef CONFIG_FILE_TABLE_DEBUG
 	struct hlist_node f_hash;
 #endif /* #ifdef CONFIG_FILE_TABLE_DEBUG */
-<<<<<<< HEAD
-=======
-
->>>>>>> c9458dfc41bd (selinux: implement sel_inode_cache file_security_cache from CAF A11 tag)
 } __attribute__((aligned(8)));
 
 struct file_handle {
 	__u32 handle_bytes;
 	int handle_type;
 	/* file identifier */
-	unsigned char f_handle[0];
+	unsigned char f_handle[];
 };
 
 static inline struct file *get_file(struct file *f)
