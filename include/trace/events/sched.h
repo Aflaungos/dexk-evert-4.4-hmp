@@ -8,6 +8,9 @@
 #include <linux/tracepoint.h>
 #include <linux/binfmts.h>
 
+#define MAX_CLUSTERS_GOV 3
+
+
 /*
  * Tracepoint for calling kthread_stop, performed to end a kthread:
  */
@@ -876,15 +879,15 @@ TRACE_EVENT(core_ctl_notif_data,
 	TP_STRUCT__entry(
 		__field(u32, nr_big)
 		__field(u32, ta_load)
-		__array(u32, ta_util, MAX_CLUSTERS)
-		__array(u32, cur_cap, MAX_CLUSTERS)
+		__array(u32, ta_util, MAX_CLUSTERS_GOV)
+		__array(u32, cur_cap, MAX_CLUSTERS_GOV)
 	),
 
 	TP_fast_assign(
 		__entry->nr_big = nr_big;
 		__entry->ta_load = ta_load;
-		memcpy(__entry->ta_util, ta_util, MAX_CLUSTERS * sizeof(u32));
-		memcpy(__entry->cur_cap, cur_cap, MAX_CLUSTERS * sizeof(u32));
+		memcpy(__entry->ta_util, ta_util, MAX_CLUSTERS_GOV * sizeof(u32));
+		memcpy(__entry->cur_cap, cur_cap, MAX_CLUSTERS_GOV * sizeof(u32));
 	),
 
 	TP_printk("nr_big=%u ta_load=%u ta_util=(%u %u %u) cur_cap=(%u %u %u)",
