@@ -26,6 +26,8 @@ struct sched_param {
 #include <linux/nodemask.h>
 #include <linux/mm_types.h>
 #include <linux/preempt.h>
+#include <linux/mm_event.h>
+
 
 #include <asm/page.h>
 #include <asm/ptrace.h>
@@ -467,6 +469,8 @@ static inline void io_schedule(void)
 {
 	io_schedule_timeout(MAX_SCHEDULE_TIMEOUT);
 }
+
+void __noreturn do_task_dead(void);
 
 struct nsproxy;
 struct user_namespace;
@@ -1844,6 +1848,11 @@ struct task_struct {
 	struct rt_mutex_waiter *pi_blocked_on;
 #endif
 
+#ifdef CONFIG_MM_EVENT_STAT
+	struct mm_event_task	mm_event[MM_TYPE_NUM];
+	unsigned long		next_period;
+#endif
+
 #ifdef CONFIG_DEBUG_MUTEXES
 	/* mutex deadlock detection */
 	struct mutex_waiter *blocked_on;
@@ -2069,6 +2078,9 @@ struct task_struct {
 	unsigned long	task_state_change;
 #endif
 	int pagefault_disabled;
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	struct task_struct		*simple_lmk_next;
+#endif
 /* CPU-specific state of this task */
 	struct thread_struct thread;
 /*
