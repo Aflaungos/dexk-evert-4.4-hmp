@@ -38,7 +38,6 @@
      execution. Hence, we get something sort of weak cpu binding.
      Though it is still not clear, will it result in better locality
      or will not.
-
    Examples:
    - NET RX softirq. It is multithreaded and does not require
      any global serialization.

@@ -518,6 +518,7 @@ static void sched_debug_header(struct seq_file *m)
 	PN(sysctl_sched_min_granularity);
 	PN(sysctl_sched_wakeup_granularity);
 	P(sysctl_sched_child_runs_first);
+	P(sysctl_sched_features);
 #undef PN
 #undef P
 
@@ -741,6 +742,7 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 	P(se.statistics.nr_wakeups_sis_count);
 	/* select_energy_cpu_brute() */
 	P(se.statistics.nr_wakeups_secb_attempts);
+	P(se.statistics.nr_wakeups_secb_sync);
 	P(se.statistics.nr_wakeups_secb_idle_bt);
 	P(se.statistics.nr_wakeups_secb_insuff_cap);
 	P(se.statistics.nr_wakeups_secb_no_nrg_sav);
