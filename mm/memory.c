@@ -2699,7 +2699,7 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 unlock:
 	pte_unmap_unlock(page_table, ptl);
 out:
-	return ret | VM_FAULT_SWAP;
+	return ret;
 out_nomap:
 	mem_cgroup_cancel_charge(page, memcg);
 	pte_unmap_unlock(page_table, ptl);
@@ -2711,7 +2711,7 @@ out_release:
 		unlock_page(swapcache);
 		page_cache_release(swapcache);
 	}
-	return ret | VM_FAULT_SWAP;
+	return ret;
 }
 
 /*
