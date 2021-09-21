@@ -34,7 +34,7 @@
 
 	chosen {
 		stdout-path = "serial0";
-		bootargs = "rcupdate.rcu_normal_after_boot=1 quiet noirqdebug core_ctl_disable_cpumask=0-7 cgroup.memory=nokmem,nosocket";
+		bootargs = "rcupdate.rcu_expedited=1 rcupdate.rcu_normal_after_boot=1 rcu_nocbs=0-7 nosoftlockup mce=ignore_ce quiet noirqdebug kpti=off";
 	};
 
 	psci {
